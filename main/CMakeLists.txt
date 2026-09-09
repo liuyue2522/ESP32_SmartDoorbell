@@ -1,2 +1,10 @@
-idf_component_register(SRCS "main.c"
-                    INCLUDE_DIRS ".")
+idf_component_register(
+    SRCS
+        "main.c"
+        "./button/xiaozhi_button.c"
+        "./wifi_sta/xiaozhi_wifi_sta.c"
+    INCLUDE_DIRS
+        "."
+        "./button"
+        "./wifi_sta"
+)
