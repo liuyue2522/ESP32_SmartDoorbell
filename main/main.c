@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include "esp_log.h"
 #include "xiaozhi_button.h"
-#include "xiaozhi_wifi_sta.h"
 static char *TAG = "xiaozhi_button";
 // 按键回调
 void button_callBack(void *button_handle, void *usr_data);
@@ -18,10 +17,6 @@ void app_main(void)
         .long_press = {
             .press_time = 3000}};
     xiaozhi_button3_registerCallBack(BUTTON_LONG_PRESS_UP, &longparams, button_callBack, (void *)3);
-
-
-    //2.目前WIFI_STA模式,只能让咱们当前设备链接AP[JCH 12345678],不支持用户配网
-    xiaozhi_wifi_sta_init();
 }
 
 void button_callBack(void *button_handle, void *usr_data)
