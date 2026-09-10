@@ -63,6 +63,14 @@ void xiaozhi_wifi_init_sta(void)
                                         NULL,
                                         &instance_got_ip);
 
+    // 新增 蓝牙配网事件
+/* *************************************************
+
+
+
+
+    *************************************************** */
+
     // 配置WIFI_STA模式,去链接的AP热点名字与密码
     wifi_config_t wifi_config = {
         .sta = {
