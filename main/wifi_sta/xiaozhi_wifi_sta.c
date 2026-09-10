@@ -262,6 +262,7 @@ void xiaozhi_wifi_init_sta(void)
                                            pdFALSE,
                                            portMAX_DELAY);
 
+    /* 
     // 链接成功
     if (bits & WIFI_CONNECTED_BIT)
     {
@@ -273,6 +274,27 @@ void xiaozhi_wifi_init_sta(void)
         // 链接失败
         ESP_LOGE(TAG, "Failed to connect to SSID:%s, password:%s",
                  EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
+    }
+    else
+    {
+        ESP_LOGE(TAG, "UNEXPECTED EVENT");
+    } 
+    */
+
+     // 链接成功
+    if (bits & WIFI_CONNECTED_BIT)
+    {
+        wifi_config_t cfg = {0};
+        esp_wifi_get_config(WIFI_IF_STA, &cfg);
+        ESP_LOGE(TAG, "connected to ap SSID:%s password:%s",
+                cfg.sta.ssid, cfg.sta.password);
+    }
+    else if (bits & WIFI_FAIL_BIT) // 链接失败
+    {
+        wifi_config_t cfg = {0};
+        esp_wifi_get_config(WIFI_IF_STA, &cfg);
+        ESP_LOGE(TAG, "Failed to connect to SSID:%s, password:%s",
+                cfg.sta.ssid, cfg.sta.password);
     }
     else
     {
