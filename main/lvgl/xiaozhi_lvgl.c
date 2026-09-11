@@ -71,10 +71,10 @@ void xiaozhi_lvgl_init(void)
     lv_obj_t *btn_title = lv_label_create(btn);
     lv_label_set_text(btn_title, "123");
 } */
+
 void xiaozhi_lvgl_test(void)
 {
     lv_obj_t * screen = lv_screen_active();
-    /* 💡 Tap a day to select it; use the header arrows to jump between months. */
     lv_obj_t * calendar = lv_calendar_create(screen);
     lv_obj_set_size(calendar, 300, 230);
     lv_obj_set_align(calendar, LV_ALIGN_CENTER);
@@ -85,3 +85,4 @@ void xiaozhi_lvgl_test(void)
     lv_calendar_set_shown_month(calendar, 5);
     lv_calendar_add_header_arrow(calendar);
 }
+
