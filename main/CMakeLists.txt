@@ -13,11 +13,13 @@ idf_component_register(
         "./button/xiaozhi_button.c"
         "./wifi_sta/xiaozhi_wifi_sta.c"
         "./lcd/xiaozhi_lcd.c"
+        "./lvgl/xiaozhi_lvgl.c"
     INCLUDE_DIRS
         "."
         "./button"
         "./wifi_sta"
         "./lcd"
+        "./lvgl"
         EMBED_FILES ${IMAGE_FILE}
 )
 

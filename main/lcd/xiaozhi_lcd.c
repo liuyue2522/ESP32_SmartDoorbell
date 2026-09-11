@@ -80,7 +80,7 @@ void xiaozhi_lcd_init(void)
     }
 }
 
-// 获取图像数据
+/* // 获取图像数据
 void xiaozhi_lcd_get_image_data(void)
 {
 
@@ -128,4 +128,4 @@ void xiaozhi_lcd_show_image(void)
         // 渲染图像数据
         esp_lcd_panel_draw_bitmap(panel_handle, 0, y, 0 + EXAMPLE_LCD_H_RES, y + PARALLEL_LINES, s_lines[sending_line]);
     }
-}
+} */

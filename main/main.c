@@ -2,7 +2,7 @@
 #include "esp_log.h"
 #include "xiaozhi_button.h"
 #include "xiaozhi_wifi_sta.h"
-#include "xiaozhi_lcd.h"
+#include "xiaozhi_lvgl.h"
 
 static char *TAG = "xiaozhi_button";
 
@@ -12,7 +12,7 @@ void button_callBack(void *button_handle, void *usr_data);
 void app_main(void)
 {
 
-    // 1.adc按键初始化
+    /* // 1.adc按键初始化
     xiaozhi_button_init();
 
     // 2.按键注册单机与双机事件
@@ -24,14 +24,12 @@ void app_main(void)
     xiaozhi_button3_registerCallBack(BUTTON_LONG_PRESS_UP, &longparams, button_callBack, (void *)3);
 
     // 2.目前WIFI_STA模式,只能让咱们当前设备链接AP[JCH 12345678],不支持用户配网
-    xiaozhi_wifi_sta_init();
+    xiaozhi_wifi_sta_init(); */
 
-    // 3.测试 LCD
-    xiaozhi_lcd_init();
-    // 获取图像数据
-    xiaozhi_lcd_get_image_data();
-    // 展示图像
-    xiaozhi_lcd_show_image();
+    
+    // 3.测试 LVGL
+    xiaozhi_lvgl_init();
+    xiaozhi_lvgl_test();
 }
 
 void button_callBack(void *button_handle, void *usr_data)
