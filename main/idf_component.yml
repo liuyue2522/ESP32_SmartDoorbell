@@ -15,4 +15,6 @@ dependencies:
   #   # All dependencies of `main` are public by default.
   #   public: true
   espressif/button: ^4.2.1
-  qrcode: "^0.1.0"
+  qrcode: ^0.1.0
+  esp_jpeg: '>=1.0.2'
+  espressif/esp_lvgl_port: ^2.9.0

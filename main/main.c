@@ -2,7 +2,10 @@
 #include "esp_log.h"
 #include "xiaozhi_button.h"
 #include "xiaozhi_wifi_sta.h"
+#include "xiaozhi_lcd.h"
+
 static char *TAG = "xiaozhi_button";
+
 // 按键回调
 void button_callBack(void *button_handle, void *usr_data);
 
@@ -22,6 +25,13 @@ void app_main(void)
 
     // 2.目前WIFI_STA模式,只能让咱们当前设备链接AP[JCH 12345678],不支持用户配网
     xiaozhi_wifi_sta_init();
+
+    // 3.测试 LCD
+    xiaozhi_lcd_init();
+    // 获取图像数据
+    xiaozhi_lcd_get_image_data();
+    // 展示图像
+    xiaozhi_lcd_show_image();
 }
 
 void button_callBack(void *button_handle, void *usr_data)
