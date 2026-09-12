@@ -15,8 +15,15 @@ void app_main(void)
     xiaozhi_lvgl_init();
     // 1. lvgl屏幕布局
     xiaozhi_lvgl_layout();
+
+    // 更新标题
+    xiaozhi_lvgl_update_title("AI 小智");
+    // 更新表情
+    xiaozhi_lvgl_update_emoji("😘");
+    // 更新对话内容
+    xiaozhi_lvgl_update_dialogue("正在连接WiFi，请稍后...");
     
-    
+
     // 2.adc按键初始化
     xiaozhi_button_init();
     // 2.按键注册单机与双机事件

@@ -84,14 +84,6 @@ static void event_handler(void *arg, esp_event_base_t event_base,
         // 蓝牙配网成功
         case WIFI_PROV_CRED_SUCCESS:
             ESP_LOGI(TAG, "Provisioning successful");
-
-            // 更新标题
-            xiaozhi_lvgl_update_title("AI 小智");
-            // 更新表情
-            xiaozhi_lvgl_update_emoji("😘");
-            // 更新对话内容
-            xiaozhi_lvgl_update_dialogue("请开始对话吧~");
-
             // 配网成功，删除二维码
             xiaozhi_lvgl_del_qrcode();
             break;
@@ -113,10 +105,17 @@ static void event_handler(void *arg, esp_event_base_t event_base,
             // 手机连上蓝牙
         case PROTOCOMM_TRANSPORT_BLE_CONNECTED:
             ESP_LOGI(TAG, "BLE transport: Connected!");
+
+            // 更新标题
+            xiaozhi_lvgl_update_title("蓝牙连接成功");
+            // 更新表情
+            xiaozhi_lvgl_update_emoji("😘");
+            // 更新对话内容
+            xiaozhi_lvgl_update_dialogue("请选择 WIFI 进行连接");
+
             break;
             // 手机断开蓝牙
         case PROTOCOMM_TRANSPORT_BLE_DISCONNECTED:
-            ESP_LOGI(TAG, "BLE transport: Disconnected!");
             break;
         default:
             break;
@@ -200,11 +199,11 @@ static void wifi_prov_print_qr(const char *name, const char *username, const cha
     esp_qrcode_generate(&cfg, payload);
 
     // 设置屏幕标题
-    xiaozhi_lvgl_update_title("请扫描二维码进行配网");
+    xiaozhi_lvgl_update_title("请扫描二维码");
     // 更新表情
     xiaozhi_lvgl_update_emoji("😎");
     // 更新对话内容
-    xiaozhi_lvgl_update_dialogue("请开始对话吧~");
+    xiaozhi_lvgl_update_dialogue("等待连接蓝牙进行配网");
 
     // LCD显示二维码
     xiaozhi_lvgl_show_qrcode(payload);
@@ -343,6 +342,12 @@ void xiaozhi_wifi_init_sta(void)
         esp_wifi_get_config(WIFI_IF_STA, &cfg);
         ESP_LOGE(TAG, "connected to ap SSID:%s password:%s",
                 cfg.sta.ssid, cfg.sta.password);
+        // 更新标题
+        xiaozhi_lvgl_update_title("AI 小智");
+        // 更新表情
+        xiaozhi_lvgl_update_emoji("😘");
+        // 更新对话内容
+        xiaozhi_lvgl_update_dialogue("欢迎使用AI 小智，请问有什么可以帮助您的？");
     }
     else if (bits & WIFI_FAIL_BIT) // 链接失败
     {
@@ -350,6 +355,12 @@ void xiaozhi_wifi_init_sta(void)
         esp_wifi_get_config(WIFI_IF_STA, &cfg);
         ESP_LOGE(TAG, "Failed to connect to SSID:%s, password:%s",
                 cfg.sta.ssid, cfg.sta.password);
+        // 更新标题
+        xiaozhi_lvgl_update_title("WIFI连接失败");
+        // 更新表情
+        xiaozhi_lvgl_update_emoji("😭");
+        // 更新对话内容
+        xiaozhi_lvgl_update_dialogue("请重试");
     }
     else
     {
