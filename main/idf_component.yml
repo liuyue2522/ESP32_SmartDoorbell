@@ -18,3 +18,4 @@ dependencies:
   qrcode: ^0.1.0
   esp_jpeg: '>=1.0.2'
   espressif/esp_lvgl_port: ^2.9.0
+  78/xiaozhi-fonts: ^1.5.5

@@ -18,35 +18,35 @@
 #include "esp_lcd_touch_tt21100.h"
 
 /* LCD size */
-#define EXAMPLE_LCD_H_RES (320)
-#define EXAMPLE_LCD_V_RES (240)
+#define EXAMPLE_LCD_H_RES   (320)
+#define EXAMPLE_LCD_V_RES   (240)
 
 /* LCD settings */
-#define EXAMPLE_LCD_SPI_NUM (SPI3_HOST)
-#define EXAMPLE_LCD_PIXEL_CLK_HZ (40 * 1000 * 1000)
-#define EXAMPLE_LCD_CMD_BITS (8)
-#define EXAMPLE_LCD_PARAM_BITS (8)
-#define EXAMPLE_LCD_BITS_PER_PIXEL (16)
+#define EXAMPLE_LCD_SPI_NUM         (SPI3_HOST)
+#define EXAMPLE_LCD_PIXEL_CLK_HZ    (40 * 1000 * 1000)
+#define EXAMPLE_LCD_CMD_BITS        (8)
+#define EXAMPLE_LCD_PARAM_BITS      (8)
+#define EXAMPLE_LCD_BITS_PER_PIXEL  (16)
 #define EXAMPLE_LCD_DRAW_BUFF_DOUBLE (1)
 #define EXAMPLE_LCD_DRAW_BUFF_HEIGHT (50)
-#define EXAMPLE_LCD_BL_ON_LEVEL (1)
+#define EXAMPLE_LCD_BL_ON_LEVEL     (1)
 
 /* LCD pins */
-#define EXAMPLE_LCD_GPIO_SCLK (GPIO_NUM_7)
-#define EXAMPLE_LCD_GPIO_MOSI (GPIO_NUM_6)
-#define EXAMPLE_LCD_GPIO_RST (GPIO_NUM_48)
-#define EXAMPLE_LCD_GPIO_DC (GPIO_NUM_4)
-#define EXAMPLE_LCD_GPIO_CS (GPIO_NUM_5)
-#define EXAMPLE_LCD_GPIO_BL (GPIO_NUM_45)
+#define EXAMPLE_LCD_GPIO_SCLK       (GPIO_NUM_7)
+#define EXAMPLE_LCD_GPIO_MOSI       (GPIO_NUM_6)
+#define EXAMPLE_LCD_GPIO_RST        (GPIO_NUM_48)
+#define EXAMPLE_LCD_GPIO_DC         (GPIO_NUM_4)
+#define EXAMPLE_LCD_GPIO_CS         (GPIO_NUM_5)
+#define EXAMPLE_LCD_GPIO_BL         (GPIO_NUM_45)
 
 /* Touch settings */
-#define EXAMPLE_TOUCH_I2C_NUM (0)
-#define EXAMPLE_TOUCH_I2C_CLK_HZ (400000)
+#define EXAMPLE_TOUCH_I2C_NUM       (0)
+#define EXAMPLE_TOUCH_I2C_CLK_HZ    (400000)
 
 /* LCD touch pins */
-#define EXAMPLE_TOUCH_I2C_SCL (GPIO_NUM_18)
-#define EXAMPLE_TOUCH_I2C_SDA (GPIO_NUM_8)
-#define EXAMPLE_TOUCH_GPIO_INT (GPIO_NUM_3)
+#define EXAMPLE_TOUCH_I2C_SCL       (GPIO_NUM_18)
+#define EXAMPLE_TOUCH_I2C_SDA       (GPIO_NUM_8)
+#define EXAMPLE_TOUCH_GPIO_INT      (GPIO_NUM_3)
 
 static const char *TAG = "EXAMPLE";
 
@@ -69,7 +69,8 @@ static esp_err_t app_lcd_init(void)
     /* LCD backlight */
     gpio_config_t bk_gpio_config = {
         .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = 1ULL << EXAMPLE_LCD_GPIO_BL};
+        .pin_bit_mask = 1ULL << EXAMPLE_LCD_GPIO_BL
+    };
     ESP_ERROR_CHECK(gpio_config(&bk_gpio_config));
 
     /* LCD initialization */
@@ -120,12 +121,10 @@ static esp_err_t app_lcd_init(void)
     return ret;
 
 err:
-    if (lcd_panel)
-    {
+    if (lcd_panel) {
         esp_lcd_panel_del(lcd_panel);
     }
-    if (lcd_io)
-    {
+    if (lcd_io) {
         esp_lcd_panel_io_del(lcd_io);
     }
     spi_bus_free(EXAMPLE_LCD_SPI_NUM);
@@ -169,43 +168,42 @@ static esp_err_t app_touch_init(void)
 
 static esp_err_t app_lvgl_init(void)
 {
-
-    // lvgl配置参数
+    /* Initialize LVGL */
     const lvgl_port_cfg_t lvgl_cfg = {
-        .task_priority = 4,       // LVGL底层任务刷新数据任务优先级
-        .task_stack = 4096,       // lvgl任务的栈的大小
-        .task_affinity = -1,      // 指定哪一个内核执行任务-1,没有指定内核!
-        .task_max_sleep_ms = 500, // 任务阻塞时间最长500ms
-        .timer_period_ms = 5      // 5ms刷新一次数据,1000ms->刷新200次,200HZ
+        .task_priority = 4,         /* LVGL task priority */
+        .task_stack = 4096,         /* LVGL task stack size */
+        .task_affinity = -1,        /* LVGL task pinned to core (-1 is no affinity) */
+        .task_max_sleep_ms = 500,   /* Maximum sleep in LVGL task */
+        .timer_period_ms = 5        /* LVGL timer tick period in ms */
     };
-    // lvgl初始化:创建任务
-    lvgl_port_init(&lvgl_cfg);
+    ESP_RETURN_ON_ERROR(lvgl_port_init(&lvgl_cfg), TAG, "LVGL port initialization failed");
 
-    // 2.lvgl与LCD液晶显示屏进行关联
+    /* Add LCD screen */
+    ESP_LOGD(TAG, "Add LCD screen");
     const lvgl_port_display_cfg_t disp_cfg = {
-        .io_handle = lcd_io,                                             // LCD液晶显示屏IO句柄
-        .panel_handle = lcd_panel,                                       // LCD面板句柄
-        .buffer_size = EXAMPLE_LCD_H_RES * EXAMPLE_LCD_DRAW_BUFF_HEIGHT, // 指定缓冲区大小[LVGL底层代码:s_lines[2]
-        .double_buffer = EXAMPLE_LCD_DRAW_BUFF_DOUBLE,                   // 双缓冲区
-        .hres = EXAMPLE_LCD_H_RES,                                       // 屏幕尺寸大小
+        .io_handle = lcd_io,
+        .panel_handle = lcd_panel,
+        .buffer_size = EXAMPLE_LCD_H_RES * EXAMPLE_LCD_DRAW_BUFF_HEIGHT,
+        .double_buffer = EXAMPLE_LCD_DRAW_BUFF_DOUBLE,
+        .hres = EXAMPLE_LCD_H_RES,
         .vres = EXAMPLE_LCD_V_RES,
-        .monochrome = false,                    // 屏幕上一个像素点是否用一位数据表示
-        .color_format = LV_COLOR_FORMAT_RGB565, // LCD屏幕上像素点需要数据格式:565
+        .monochrome = false,
+#if LVGL_VERSION_MAJOR >= 9
+        .color_format = LV_COLOR_FORMAT_RGB565,
+#endif
         .rotation = {
-            .swap_xy = true, // 镜像的设置
+            .swap_xy = false,
             .mirror_x = true,
-            .mirror_y = false,
+            .mirror_y = true,
         },
         .flags = {
-            .buff_dma = true,   // 使用DMA
-            .swap_bytes = true, // 大端小端
-
-        }};
-      //lvgl与LCD进行关联   
+            .buff_dma = true,
+#if LVGL_VERSION_MAJOR >= 9
+            .swap_bytes = true,
+#endif
+        }
+    };
     lvgl_disp = lvgl_port_add_disp(&disp_cfg);
-
-
-    
 
     /* Add touch input (for selected screen) */
     const lvgl_port_touch_cfg_t touch_cfg = {
@@ -221,8 +219,7 @@ static void _app_button_cb(lv_event_t *e)
 {
     lv_disp_rotation_t rotation = lv_disp_get_rotation(lvgl_disp);
     rotation++;
-    if (rotation > LV_DISPLAY_ROTATION_270)
-    {
+    if (rotation > LV_DISPLAY_ROTATION_270) {
         rotation = LV_DISPLAY_ROTATION_0;
     }
 
@@ -251,10 +248,10 @@ static void app_main_display(void)
 #if LVGL_VERSION_MAJOR == 8
     lv_label_set_recolor(label, true);
     lv_label_set_text(label,
-                      "#FF0000 " LV_SYMBOL_BELL " Hello world Espressif and LVGL " LV_SYMBOL_BELL "#\n#FF9400 " LV_SYMBOL_WARNING " For simplier initialization, use BSP " LV_SYMBOL_WARNING " #");
+                      "#FF0000 "LV_SYMBOL_BELL" Hello world Espressif and LVGL "LV_SYMBOL_BELL"#\n#FF9400 "LV_SYMBOL_WARNING" For simplier initialization, use BSP "LV_SYMBOL_WARNING" #");
 #else
     lv_label_set_text(label,
-                      LV_SYMBOL_BELL " Hello world Espressif and LVGL " LV_SYMBOL_BELL "\n " LV_SYMBOL_WARNING " For simplier initialization, use BSP " LV_SYMBOL_WARNING);
+                      LV_SYMBOL_BELL" Hello world Espressif and LVGL "LV_SYMBOL_BELL"\n "LV_SYMBOL_WARNING" For simplier initialization, use BSP "LV_SYMBOL_WARNING);
 #endif
     lv_obj_align(label, LV_ALIGN_CENTER, 0, 20);
 
@@ -271,15 +268,14 @@ static void app_main_display(void)
 
 void app_main(void)
 {
-
-    // 1.LCD液晶显示屏初始化,lvgl才能在显示屏上显示图形！
-    app_lcd_init();
+    /* LCD HW initialization */
+    ESP_ERROR_CHECK(app_lcd_init());
 
     /* Touch initialization */
     ESP_ERROR_CHECK(app_touch_init());
 
-    // 2.初始化LVGL
-    app_lvgl_init();
+    /* LVGL initialization */
+    ESP_ERROR_CHECK(app_lvgl_init());
 
     /* Show LVGL objects */
     app_main_display();

@@ -1,8 +1,8 @@
 #include "xiaozhi_lcd.h"
 // 双缓冲区
-static uint16_t *s_lines[2];
+/* static uint16_t *s_lines[2]; */
 // 存储整张图像图像的数据
-uint8_t *image_buffers = NULL;
+/* uint8_t *image_buffers = NULL; */
 // 3.LCD的IO句柄
 esp_lcd_panel_io_handle_t io_handle = NULL;
 // 面板句柄
@@ -10,10 +10,10 @@ esp_lcd_panel_handle_t panel_handle = NULL;
 // 获取文件的起始与结束地址
 // extern const uint8_t image_jpg_start[] asm("_binary_image_jpg_start");
 // extern const uint8_t image_jpg_end[] asm("_binary_image_jpg_end");
-#define STRINGIFY(x) #x
+/* #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
 extern const uint8_t image_jpg_start[] asm(TOSTRING(IMAGE_START_SYMBOL));
-extern const uint8_t image_jpg_end[]   asm(TOSTRING(IMAGE_END_SYMBOL));
+extern const uint8_t image_jpg_end[]   asm(TOSTRING(IMAGE_END_SYMBOL)); */
 
 
 // 1.LCD初始化方法
@@ -72,12 +72,12 @@ void xiaozhi_lcd_init(void)
     // 背光灯开启
     gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, EXAMPLE_LCD_BK_LIGHT_ON_LEVEL);
 
-    // LCD需要双缓冲区
+    /* // LCD需要双缓冲区
     for (uint8_t i = 0; i < 2; i++)
     {
         //开辟空间使用外部PSRAM的
         s_lines[i] = heap_caps_malloc(EXAMPLE_LCD_H_RES * PARALLEL_LINES * sizeof(uint16_t), MALLOC_CAP_SPIRAM);
-    }
+    } */
 }
 
 /* // 获取图像数据

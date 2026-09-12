@@ -2,6 +2,7 @@
 // 按键句柄
 button_handle_t adc_btn2 = NULL;
 button_handle_t adc_btn3 = NULL;
+
 // 1.ADC按键初始化
 void xiaozhi_button_init(void)
 {

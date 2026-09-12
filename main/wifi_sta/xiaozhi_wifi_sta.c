@@ -1,22 +1,28 @@
 #include "xiaozhi_wifi_sta.h"
+
+// 日志标签
 static const char *TAG = "wifi station";
-// WIFI重连次数
+
+// 记录 Wi-Fi 连接失败重试次数，超过上限后置位失败标志。
 static int s_retry_num = 0;
-// 事件标志组句柄
+
+// 事件标志组句柄：FreeRTOS 事件组，用于在"连接成功"和"连接失败"之间同步主任务。
 static EventGroupHandle_t s_wifi_event_group;
 
 // WIFI回调
 static void event_handler(void *arg, esp_event_base_t event_base,
                           int32_t event_id, void *event_data)
 {
+    // 1.Wi-Fi 事件
+    // Wi-Fi 启动后立刻发起连接
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
     {
         esp_wifi_connect();
     }
-
+    // Wi-Fi 连接失败重试
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
     {
-        if (s_retry_num < EXAMPLE_ESP_MAXIMUM_RETRY)
+        if (s_retry_num < EXAMPLE_ESP_MAXIMUM_RETRY) // 最多重试 5 次
         {
             esp_wifi_connect();
             s_retry_num++;
@@ -24,19 +30,30 @@ static void event_handler(void *arg, esp_event_base_t event_base,
         }
         else
         {
-            xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
+            xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT); // 超过重试上限，置位失败标志
+
+            // 更新标题
+            xiaozhi_lvgl_update_title("超过重试上限，置位失败标志");
+            // 更新表情
+            xiaozhi_lvgl_update_emoji("😭");
+            // 更新对话内容
+            xiaozhi_lvgl_update_dialogue("请重新进行配网");
         }
         ESP_LOGI(TAG, "connect to the AP fail");
     }
+
+    // 2.IP事件
+    // 获得 IP 地址，说明 Wi-Fi 真正连接成功。
     if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
     {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
         ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
         s_retry_num = 0;
+        // 置位成功标志。
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
     }
 
-    //*配网相关新增事件
+    // 3. 配网事件（WIFI_PROV_EVENT）
     if (event_base == WIFI_PROV_EVENT)
     {
         switch (event_id)
@@ -67,6 +84,16 @@ static void event_handler(void *arg, esp_event_base_t event_base,
         // 蓝牙配网成功
         case WIFI_PROV_CRED_SUCCESS:
             ESP_LOGI(TAG, "Provisioning successful");
+
+            // 更新标题
+            xiaozhi_lvgl_update_title("AI 小智");
+            // 更新表情
+            xiaozhi_lvgl_update_emoji("😘");
+            // 更新对话内容
+            xiaozhi_lvgl_update_dialogue("请开始对话吧~");
+
+            // 配网成功，删除二维码
+            xiaozhi_lvgl_del_qrcode();
             break;
         case WIFI_PROV_END:
             // 蓝牙配网结束:相应配网资源全部关闭,蓝牙资源!!!!!
@@ -77,14 +104,17 @@ static void event_handler(void *arg, esp_event_base_t event_base,
         }
     }
 
-    // ESP32_低功耗蓝牙事件:手机是否脸上ESP32,手机蓝牙是否断开链接
+    // 4.ESP32_低功耗蓝牙传输事件: 手机是否连上ESP32,手机蓝牙是否断开链接
+    // 用于监控手机 App 与 ESP32 的 BLE 连接状态。
     if (event_base == PROTOCOMM_TRANSPORT_BLE_EVENT)
     {
         switch (event_id)
         {
+            // 手机连上蓝牙
         case PROTOCOMM_TRANSPORT_BLE_CONNECTED:
             ESP_LOGI(TAG, "BLE transport: Connected!");
             break;
+            // 手机断开蓝牙
         case PROTOCOMM_TRANSPORT_BLE_DISCONNECTED:
             ESP_LOGI(TAG, "BLE transport: Disconnected!");
             break;
@@ -93,17 +123,20 @@ static void event_handler(void *arg, esp_event_base_t event_base,
         }
     }
 
-    // 蓝牙配网:BLE传输数据加密相关打印!
+    // 安全会话事件: BLE传输数据加密相关打印!
     if (event_base == PROTOCOMM_SECURITY_SESSION_EVENT)
     {
         switch (event_id)
         {
+            // 加密会话建立成功
         case PROTOCOMM_SECURITY_SESSION_SETUP_OK:
             ESP_LOGI(TAG, "Secured session established!");
             break;
+            // 参数错误
         case PROTOCOMM_SECURITY_SESSION_INVALID_SECURITY_PARAMS:
             ESP_LOGE(TAG, "Received invalid security parameters for establishing secure session!");
             break;
+            // POP 或用户名不匹配
         case PROTOCOMM_SECURITY_SESSION_CREDENTIALS_MISMATCH:
             ESP_LOGE(TAG, "Received incorrect username and/or PoP for establishing secure session!");
             break;
@@ -114,10 +147,15 @@ static void event_handler(void *arg, esp_event_base_t event_base,
 }
 
 //*获取配网当前蓝牙名字
+/* 
+读取 Wi-Fi STA 的 MAC 地址。
+用 MAC 后 3 字节拼成唯一蓝牙名，如 liuyue_9E9E00。
+手机 App 搜到的就是这个蓝牙名。
+*/
 static void get_device_service_name(char *service_name, size_t max)
 {
     // 拼凑ESP32蓝牙设备名字
-    const char *ssid_prefix = "PROV_";
+    const char *ssid_prefix = "liuyue_"; // 前缀
     uint8_t eth_mac[6];
     esp_wifi_get_mac(WIFI_IF_STA, eth_mac);
 
@@ -125,8 +163,12 @@ static void get_device_service_name(char *service_name, size_t max)
              ssid_prefix, eth_mac[3], eth_mac[4], eth_mac[5]);
 }
 
-//*生成二维码图像
-// 生成二维码图像
+// 生成配网二维码
+/* 
+生成一个 JSON 字符串，包含协议版本、蓝牙名、PoP 密码、传输方式。
+手机 App 扫描这个二维码后，会自动通过 BLE 连接设备，并发送 Wi-Fi 账号密码。
+esp_qrcode_generate 是 qrcode 组件提供的，会把二维码以 ASCII 形式打印到串口终端。
+*/
 static void wifi_prov_print_qr(const char *name, const char *username, const char *pop, const char *transport)
 {
 
@@ -141,7 +183,6 @@ static void wifi_prov_print_qr(const char *name, const char *username, const cha
     char payload[150] = {0};
     if (pop)
     {
-
         snprintf(payload, sizeof(payload), "{\"ver\":\"%s\",\"name\":\"%s\""
                                            ",\"pop\":\"%s\",\"transport\":\"%s\"}",
                  PROV_QR_VERSION, name, pop, transport);
@@ -153,11 +194,23 @@ static void wifi_prov_print_qr(const char *name, const char *username, const cha
                  PROV_QR_VERSION, name, transport);
     }
 
-    // 生成二维码图像,vsocde调试控制键打印出来!!!!!
+    // 生成二维码图像
     esp_qrcode_config_t cfg = ESP_QRCODE_CONFIG_DEFAULT();
+    // qrcode 组件提供的，会把二维码以 ASCII 形式打印到串口终端。
     esp_qrcode_generate(&cfg, payload);
+
+    // 设置屏幕标题
+    xiaozhi_lvgl_update_title("请扫描二维码进行配网");
+    // 更新表情
+    xiaozhi_lvgl_update_emoji("😎");
+    // 更新对话内容
+    xiaozhi_lvgl_update_dialogue("请开始对话吧~");
+
+    // LCD显示二维码
+    xiaozhi_lvgl_show_qrcode(payload);
 }
 
+// 核心初始化流程
 void xiaozhi_wifi_init_sta(void)
 {
     // 1.事件标志组
@@ -167,7 +220,10 @@ void xiaozhi_wifi_init_sta(void)
     // 3.创建事件循环:底层本质,创建任务(内核0,优先级20)
     esp_event_loop_create_default();
     // 4.创建WIFI_STA模式
-    esp_netif_create_default_wifi_sta();
+    esp_netif_t *sta_netif = esp_netif_create_default_wifi_sta();
+    // ★ 设置设备主机名（路由器上显示的名称）
+    esp_netif_set_hostname(sta_netif, "liuyue"); 
+
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     esp_wifi_init(&cfg);
 
@@ -190,30 +246,29 @@ void xiaozhi_wifi_init_sta(void)
     esp_event_handler_register(PROTOCOMM_SECURITY_SESSION_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL);
     esp_event_handler_register(PROTOCOMM_TRANSPORT_BLE_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL);
 
-    //***蓝牙配网
-    wifi_prov_mgr_config_t config = {
 
+    // 初始化配网管理器, 配置配网模式为BLE配网
+    wifi_prov_mgr_config_t config = {
         .scheme = wifi_prov_scheme_ble,                                      // WIFI配网模式选择:BLE、AP配网
         .scheme_event_handler = WIFI_PROV_SCHEME_BLE_EVENT_HANDLER_FREE_BTDM // BLE配网完成,蓝牙用到内存资源释放掉!!!!!
     };
-
     // WIFI的蓝牙配网初始化
     wifi_prov_mgr_init(config);
+
+
     bool provisioned = false;
     // 检测当前设备是否配过网:曾经配网过
     wifi_prov_mgr_is_provisioned(&provisioned);
-
     // 判断:设备没有配网,应该进行配网
     if (!provisioned)
     {
-
         // 获取ESP32蓝牙设备的名字
         char service_name[12];
         get_device_service_name(service_name, sizeof(service_name));
 
         // 蓝牙传输数据加密算法1
-        wifi_prov_security_t security = WIFI_PROV_SECURITY_1; // 安全系数较高,但是产品售卖的时候算法2【强烈推荐的!!!!!!!!】
-        const char *pop = "abcd1234";
+        wifi_prov_security_t security = WIFI_PROV_SECURITY_1; // 使用 PoP 加密。    安全系数较高,但是产品售卖的时候算法2【强烈推荐的!!!!!!!!】
+        const char *pop = "abcd1234"; // PoP 密码
         wifi_prov_security1_params_t *sec_params = pop;
         const char *username = NULL;
         const char *service_key = NULL;
@@ -302,21 +357,27 @@ void xiaozhi_wifi_init_sta(void)
     }
 }
 
+
+
+
 // WIFI_STA模式,让MCU可以去链接热点(路由器本事)
 void xiaozhi_wifi_sta_init(void)
 {
-    // 1.初始化FLASH
+    // 1.初始化FLASH： 初始化 NVS（保存 Wi-Fi 配置）
     esp_err_t ret = nvs_flash_init();
+
+    // 2.如果 NVS 分区满或版本不匹配，先擦除再初始化
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
     {
         nvs_flash_erase();
         nvs_flash_init();
     }
 
-    // 初始化WIFI_STAM模式
+    // 3.初始化WIFI_STAM模式
     xiaozhi_wifi_init_sta();
 }
 
+// 擦除配网信息
 void xiaozhi_wifi_sta_erase(void)
 {
 
