@@ -35,7 +35,7 @@ static void event_handler(void *arg, esp_event_base_t event_base,
             // 更新标题
             xiaozhi_lvgl_update_title("超过重试上限，置位失败标志");
             // 更新表情
-            xiaozhi_lvgl_update_emoji("😭");
+            xiaozhi_lvgl_update_emoji("crying");
             // 更新对话内容
             xiaozhi_lvgl_update_dialogue("请重新进行配网");
         }
@@ -109,7 +109,7 @@ static void event_handler(void *arg, esp_event_base_t event_base,
             // 更新标题
             xiaozhi_lvgl_update_title("蓝牙连接成功");
             // 更新表情
-            xiaozhi_lvgl_update_emoji("😘");
+            xiaozhi_lvgl_update_emoji("kissy");
             // 更新对话内容
             xiaozhi_lvgl_update_dialogue("请选择 WIFI 进行连接");
 
@@ -201,7 +201,7 @@ static void wifi_prov_print_qr(const char *name, const char *username, const cha
     // 设置屏幕标题
     xiaozhi_lvgl_update_title("请扫描二维码");
     // 更新表情
-    xiaozhi_lvgl_update_emoji("😎");
+    xiaozhi_lvgl_update_emoji("cool");
     // 更新对话内容
     xiaozhi_lvgl_update_dialogue("等待连接蓝牙进行配网");
 
@@ -345,7 +345,7 @@ void xiaozhi_wifi_init_sta(void)
         // 更新标题
         xiaozhi_lvgl_update_title("AI 小智");
         // 更新表情
-        xiaozhi_lvgl_update_emoji("😘");
+        xiaozhi_lvgl_update_emoji("kissy");
         // 更新对话内容
         xiaozhi_lvgl_update_dialogue("欢迎使用AI 小智，请问有什么可以帮助您的？");
     }
@@ -358,7 +358,7 @@ void xiaozhi_wifi_init_sta(void)
         // 更新标题
         xiaozhi_lvgl_update_title("WIFI连接失败");
         // 更新表情
-        xiaozhi_lvgl_update_emoji("😭");
+        xiaozhi_lvgl_update_emoji("crying");
         // 更新对话内容
         xiaozhi_lvgl_update_dialogue("请重试");
     }

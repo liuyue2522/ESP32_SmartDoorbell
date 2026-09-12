@@ -19,7 +19,7 @@ void app_main(void)
     // 更新标题
     xiaozhi_lvgl_update_title("AI 小智");
     // 更新表情
-    xiaozhi_lvgl_update_emoji("😘");
+    xiaozhi_lvgl_update_emoji("kissy");
     // 更新对话内容
     xiaozhi_lvgl_update_dialogue("正在连接WiFi，请稍后...");
     

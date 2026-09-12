@@ -164,7 +164,15 @@ void xiaozhi_lvgl_update_emoji(const char *newEmoji)
     // 临界区
     lvgl_port_lock(0);
     // 更新标题内容
-    lv_label_set_text(emoji, newEmoji);
+    for (uint8_t i = 0; i < 21; i++)
+    {
+        if (strcmp(newEmoji, emoji_array[i].emotion) == 0)
+        {
+            // 更新label展示内容
+            lv_label_set_text(emoji, emoji_array[i].text);
+            break;
+        }
+    }
     // 退出临界区
     lvgl_port_unlock();
 }

@@ -9,6 +9,9 @@
 // 表情字体
 #include "font_emoji.h"
 
+// 表情名称和文本对应关系
+#include "xiaozhi_data.h"
+
 
 // 1.LVGL初始化方法
 void xiaozhi_lvgl_init(void);
