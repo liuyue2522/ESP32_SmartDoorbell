@@ -37,7 +37,7 @@ static void event_handler(void *arg, esp_event_base_t event_base,
             // 更新表情
             xiaozhi_lvgl_update_emoji("crying");
             // 更新对话内容
-            xiaozhi_lvgl_update_dialogue("请重新进行配网");
+            xiaozhi_lvgl_update_dialogue_stream("请重新进行配网");
         }
         ESP_LOGI(TAG, "connect to the AP fail");
     }
@@ -111,7 +111,7 @@ static void event_handler(void *arg, esp_event_base_t event_base,
             // 更新表情
             xiaozhi_lvgl_update_emoji("kissy");
             // 更新对话内容
-            xiaozhi_lvgl_update_dialogue("请选择 WIFI 进行连接");
+            xiaozhi_lvgl_update_dialogue_stream("请选择 WIFI 进行连接");
 
             break;
             // 手机断开蓝牙
@@ -203,7 +203,7 @@ static void wifi_prov_print_qr(const char *name, const char *username, const cha
     // 更新表情
     xiaozhi_lvgl_update_emoji("cool");
     // 更新对话内容
-    xiaozhi_lvgl_update_dialogue("等待连接蓝牙进行配网");
+    xiaozhi_lvgl_update_dialogue_stream("等待连接蓝牙进行配网");
 
     // LCD显示二维码
     xiaozhi_lvgl_show_qrcode(payload);
@@ -347,7 +347,7 @@ void xiaozhi_wifi_init_sta(void)
         // 更新表情
         xiaozhi_lvgl_update_emoji("kissy");
         // 更新对话内容
-        xiaozhi_lvgl_update_dialogue("欢迎使用AI 小智，请问有什么可以帮助您的？");
+        xiaozhi_lvgl_update_dialogue_stream("欢迎使用AI 小智，请问有什么可以帮助您的？");
     }
     else if (bits & WIFI_FAIL_BIT) // 链接失败
     {
@@ -360,7 +360,7 @@ void xiaozhi_wifi_init_sta(void)
         // 更新表情
         xiaozhi_lvgl_update_emoji("crying");
         // 更新对话内容
-        xiaozhi_lvgl_update_dialogue("请重试");
+        xiaozhi_lvgl_update_dialogue_stream("请重试");
     }
     else
     {

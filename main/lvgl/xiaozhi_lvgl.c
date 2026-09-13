@@ -38,6 +38,66 @@ lv_obj_t *dialog = NULL;
 // 11.二维码背景颜色
 #define QR_LIGHT lv_color_hex(0x000000)
 
+
+// -----------------------------------流式文字（打字机效果）-----------------------------------------------
+// 缓冲区大小
+#define TYPEWRITER_BUF_SIZE 256
+
+// 打字机：保存完整文本
+static char dialog_full_text[TYPEWRITER_BUF_SIZE] = {0};
+
+// 打字机：执行回调函数。   每一帧的回调：只显示前 N 个字符
+static void typewriter_exec_cb(void *var, int32_t value)
+{
+    lv_obj_t *label = (lv_obj_t *)var;
+    int len = strlen(dialog_full_text);
+
+    if (value < 0)   value = 0;
+    if (value > len) value = len;
+
+    // 用前 value 个字符拼出子串
+    char buf[TYPEWRITER_BUF_SIZE];
+    memcpy(buf, dialog_full_text, value);
+    buf[value] = '\0'; // 在末尾结束符
+
+    lv_label_set_text(label, buf);
+}
+
+// 启动动画的接口
+void xiaozhi_lvgl_update_dialogue_stream(const char *text)
+{
+    lvgl_port_lock(0);
+
+    // 保存完整文本
+    strncpy(dialog_full_text, text, sizeof(dialog_full_text) - 1);
+    dialog_full_text[sizeof(dialog_full_text) - 1] = '\0'; // 在末尾结束符
+
+    int len = strlen(dialog_full_text);
+
+    // 先删掉上一次可能还在跑的动画，避免叠加
+    lv_anim_delete(dialog, typewriter_exec_cb); // 精确删除该对象上由这个回调驱动的动画，不影响对象上的其他动画。
+
+    if (len == 0) {
+        lv_label_set_text(dialog, "");
+        lvgl_port_unlock();
+        return;
+    }
+
+    // 配置动画：从 0 到 len，每个字 50ms
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, dialog); // 动画作用对象
+    lv_anim_set_values(&a, 0, len); // 起止值
+    lv_anim_set_duration(&a, len * 50); // 时长
+    lv_anim_set_exec_cb(&a, typewriter_exec_cb); // 每一帧回调，把当前值写到对象上
+    lv_anim_set_path_cb(&a, lv_anim_path_linear);  // 匀速，不要缓动
+    lv_anim_start(&a); // 启动动画
+
+    lvgl_port_unlock();
+}
+
+// ------------------------------------------------------------------------------------
+
 // 1.LVGL初始化并且与LCD进行关联
 void xiaozhi_lvgl_init(void) {
 
@@ -111,7 +171,7 @@ void xiaozhi_lvgl_layout(void)
     lvgl_port_lock(0);
 
     // 1.根组件
-    screen = lv_screen_active();
+    screen = lv_screen_active(); // 获取当前活跃的屏幕      lv_obj_create(NULL);  // 如果父对象为 NULL → 本质是在创建屏幕
     // 设置屏幕背景颜色
     lv_obj_set_style_bg_color(screen, lv_color_hex(0x003a57), LV_PART_MAIN);
 

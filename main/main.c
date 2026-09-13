@@ -21,7 +21,7 @@ void app_main(void)
     // 更新表情
     xiaozhi_lvgl_update_emoji("kissy");
     // 更新对话内容
-    xiaozhi_lvgl_update_dialogue("正在连接WiFi，请稍后...");
+    xiaozhi_lvgl_update_dialogue_stream("正在连接WiFi，请稍后...");
     
 
     // 2.adc按键初始化

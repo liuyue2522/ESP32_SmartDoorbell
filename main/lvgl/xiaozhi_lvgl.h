@@ -29,7 +29,8 @@ void xiaozhi_lvgl_update_title(const char *title);
 // 5.更新表情
 void xiaozhi_lvgl_update_emoji(const char *face);
 // 6.更新对话
-void xiaozhi_lvgl_update_dialogue(const char *dialog);
+void xiaozhi_lvgl_update_dialogue(const char *dialog); // 直接显示
+void xiaozhi_lvgl_update_dialogue_stream(const char *text); // 流式显示
 
 
 // 7.展示二维码
