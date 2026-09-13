@@ -30,7 +30,6 @@ void xiaozhi_lvgl_update_title(const char *title);
 void xiaozhi_lvgl_update_emoji(const char *face);
 // 6.更新对话
 void xiaozhi_lvgl_update_dialogue(const char *dialog); // 直接显示
-void xiaozhi_lvgl_update_dialogue_stream(const char *text); // 流式显示
 
 
 // 7.展示二维码
@@ -39,6 +38,21 @@ void xiaozhi_lvgl_show_qrcode(const char *qrcode);
 
 // 8.删除二维码
 void xiaozhi_lvgl_del_qrcode(void);
+
+
+// ----------------------------------------------
+
+// 对话框流式显示
+void xiaozhi_lvgl_update_dialogue_stream(const char *text);
+
+// 启动对象闪烁动画
+void xiaozhi_lvgl_start_blink(lv_obj_t *obj);
+
+// 停止对象闪烁并恢复完全不透明
+void xiaozhi_lvgl_stop_blink(lv_obj_t *obj);
+
+// -----------------------------------------------
+
 
 
 #endif /* __XIAOZHI_LVGL_H__ */

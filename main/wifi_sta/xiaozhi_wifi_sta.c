@@ -9,6 +9,9 @@ static int s_retry_num = 0;
 // 事件标志组句柄：FreeRTOS 事件组，用于在"连接成功"和"连接失败"之间同步主任务。
 static EventGroupHandle_t s_wifi_event_group;
 
+// 引用外部变量：  xiaozhi_lvgl.c 中定义的标题栏对象
+extern lv_obj_t *title;
+
 // WIFI回调
 static void event_handler(void *arg, esp_event_base_t event_base,
                           int32_t event_id, void *event_data)
@@ -33,7 +36,9 @@ static void event_handler(void *arg, esp_event_base_t event_base,
             xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT); // 超过重试上限，置位失败标志
 
             // 更新标题
-            xiaozhi_lvgl_update_title("超过重试上限，置位失败标志");
+            xiaozhi_lvgl_update_title("wifi 连接超过重试上限");
+            // wifi连接失败：标题栏闪烁
+            xiaozhi_lvgl_start_blink(title);
             // 更新表情
             xiaozhi_lvgl_update_emoji("crying");
             // 更新对话内容
@@ -51,6 +56,8 @@ static void event_handler(void *arg, esp_event_base_t event_base,
         s_retry_num = 0;
         // 置位成功标志。
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+        // wifi连接成功：标题栏停止闪烁
+        xiaozhi_lvgl_stop_blink(title);
     }
 
     // 3. 配网事件（WIFI_PROV_EVENT）
@@ -335,7 +342,7 @@ void xiaozhi_wifi_init_sta(void)
     } 
     */
 
-     // 链接成功
+     // 连接成功
     if (bits & WIFI_CONNECTED_BIT)
     {
         wifi_config_t cfg = {0};
@@ -344,6 +351,8 @@ void xiaozhi_wifi_init_sta(void)
                 cfg.sta.ssid, cfg.sta.password);
         // 更新标题
         xiaozhi_lvgl_update_title("AI 小智");
+        // wifi连接成功：标题栏停止闪烁
+        xiaozhi_lvgl_stop_blink(title);
         // 更新表情
         xiaozhi_lvgl_update_emoji("kissy");
         // 更新对话内容
@@ -357,6 +366,8 @@ void xiaozhi_wifi_init_sta(void)
                 cfg.sta.ssid, cfg.sta.password);
         // 更新标题
         xiaozhi_lvgl_update_title("WIFI连接失败");
+        // wifi连接失败：标题栏闪烁
+        xiaozhi_lvgl_start_blink(title);
         // 更新表情
         xiaozhi_lvgl_update_emoji("crying");
         // 更新对话内容

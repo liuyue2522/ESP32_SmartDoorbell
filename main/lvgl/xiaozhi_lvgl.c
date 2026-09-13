@@ -39,65 +39,6 @@ lv_obj_t *dialog = NULL;
 #define QR_LIGHT lv_color_hex(0x000000)
 
 
-// -----------------------------------流式文字（打字机效果）-----------------------------------------------
-// 缓冲区大小
-#define TYPEWRITER_BUF_SIZE 256
-
-// 打字机：保存完整文本
-static char dialog_full_text[TYPEWRITER_BUF_SIZE] = {0};
-
-// 打字机：执行回调函数。   每一帧的回调：只显示前 N 个字符
-static void typewriter_exec_cb(void *var, int32_t value)
-{
-    lv_obj_t *label = (lv_obj_t *)var;
-    int len = strlen(dialog_full_text);
-
-    if (value < 0)   value = 0;
-    if (value > len) value = len;
-
-    // 用前 value 个字符拼出子串
-    char buf[TYPEWRITER_BUF_SIZE];
-    memcpy(buf, dialog_full_text, value);
-    buf[value] = '\0'; // 在末尾结束符
-
-    lv_label_set_text(label, buf);
-}
-
-// 启动动画的接口
-void xiaozhi_lvgl_update_dialogue_stream(const char *text)
-{
-    lvgl_port_lock(0);
-
-    // 保存完整文本
-    strncpy(dialog_full_text, text, sizeof(dialog_full_text) - 1);
-    dialog_full_text[sizeof(dialog_full_text) - 1] = '\0'; // 在末尾结束符
-
-    int len = strlen(dialog_full_text);
-
-    // 先删掉上一次可能还在跑的动画，避免叠加
-    lv_anim_delete(dialog, typewriter_exec_cb); // 精确删除该对象上由这个回调驱动的动画，不影响对象上的其他动画。
-
-    if (len == 0) {
-        lv_label_set_text(dialog, "");
-        lvgl_port_unlock();
-        return;
-    }
-
-    // 配置动画：从 0 到 len，每个字 50ms
-    lv_anim_t a;
-    lv_anim_init(&a);
-    lv_anim_set_var(&a, dialog); // 动画作用对象
-    lv_anim_set_values(&a, 0, len); // 起止值
-    lv_anim_set_duration(&a, len * 50); // 时长
-    lv_anim_set_exec_cb(&a, typewriter_exec_cb); // 每一帧回调，把当前值写到对象上
-    lv_anim_set_path_cb(&a, lv_anim_path_linear);  // 匀速，不要缓动
-    lv_anim_start(&a); // 启动动画
-
-    lvgl_port_unlock();
-}
-
-// ------------------------------------------------------------------------------------
-
 // 1.LVGL初始化并且与LCD进行关联
 void xiaozhi_lvgl_init(void) {
 
@@ -284,4 +225,146 @@ void xiaozhi_lvgl_del_qrcode(void)
     lv_obj_delete(qrcode);
     lvgl_port_unlock();
 }
+
+
+
+
+
+// -----------------------------------流式文字（打字机效果）-----------------------------------------------
+// 缓冲区大小
+#define TYPEWRITER_BUF_SIZE 256
+
+// 打字机：保存完整文本
+static char dialog_full_text[TYPEWRITER_BUF_SIZE] = {0};
+
+// 1.打字机：执行回调函数。   每一帧的回调：只显示前 N 个字符
+static void typewriter_exec_cb(void *var, int32_t value)
+{
+    lv_obj_t *label = (lv_obj_t *)var;
+    int len = strlen(dialog_full_text);
+
+    if (value < 0)   value = 0;
+    if (value > len) value = len;
+
+    // 用前 value 个字符拼出子串
+    char buf[TYPEWRITER_BUF_SIZE];
+    memcpy(buf, dialog_full_text, value);
+    buf[value] = '\0'; // 在末尾结束符
+
+    lv_label_set_text(label, buf);
+}
+
+// 2.启动动画的接口
+void xiaozhi_lvgl_update_dialogue_stream(const char *text)
+{
+    lvgl_port_lock(0);
+
+    // 保存完整文本
+    strncpy(dialog_full_text, text, sizeof(dialog_full_text) - 1);
+    dialog_full_text[sizeof(dialog_full_text) - 1] = '\0'; // 在末尾结束符
+
+    int len = strlen(dialog_full_text);
+
+    // 先删掉上一次可能还在跑的动画，避免叠加
+    lv_anim_delete(dialog, typewriter_exec_cb); // 精确删除该对象上由这个回调驱动的动画，不影响对象上的其他动画。
+
+    if (len == 0) {
+        lv_label_set_text(dialog, "");
+        lvgl_port_unlock();
+        return;
+    }
+
+    // 配置动画：从 0 到 len，每个字 50ms
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, dialog); // 动画作用对象
+    lv_anim_set_values(&a, 0, len); // 起止值
+    lv_anim_set_duration(&a, len * 50); // 时长
+    lv_anim_set_exec_cb(&a, typewriter_exec_cb); // 每一帧回调，把当前值写到对象上
+    lv_anim_set_path_cb(&a, lv_anim_path_linear);  // 匀速，不要缓动
+    lv_anim_start(&a); // 启动动画
+
+    lvgl_port_unlock();
+}
+
+
+// --------------------------------------闪烁效果----------------------------------------------
+
+/**
+ * @brief 闪烁动画的每一帧回调函数
+ *
+ * 该函数由 LVGL 动画系统在每一帧调用，用于根据当前动画值设置对象的透明度。
+ *
+ * @param var   动画作用的对象指针（实际传入的是 lv_obj_t *）
+ * @param value 当前动画值，取值范围由 lv_anim_set_values 决定，
+ *              这里表示透明度（0~255，LV_OPA_COVER 为完全不透明）
+ */
+static void blink_exec_cb(void *var, int32_t value)
+{
+    // 设置对象的不透明度
+    // 第三个参数 0 表示默认状态（LV_STATE_DEFAULT）
+    lv_obj_set_style_opa((lv_obj_t *)var, value, 0);
+}
+
+
+/**
+ * @brief 启动对象闪烁动画
+ *
+ * 让指定对象在完全不透明和半透明之间循环切换，常用于提示连接失败、警告等场景。
+ * 动画为无限循环，使用缓入缓出曲线，视觉效果更柔和。
+ *
+ * @param obj 需要闪烁的 LVGL 对象（如 label、button 等）
+ *
+ * @note 该函数内部使用 lvgl_port_lock 加锁，可在非 LVGL 任务中安全调用。
+ *       若同一对象已有相同回调的动画，会先删除再重新创建，避免动画叠加。
+ */
+void xiaozhi_lvgl_start_blink(lv_obj_t *obj)
+{
+    // 进入 LVGL 临界区，保证线程安全
+    lvgl_port_lock(0);
+
+    // 先清掉可能已有的闪烁动画，防止重复启动导致多个动画同时修改透明度
+    lv_anim_delete(obj, blink_exec_cb);
+
+    // 初始化动画结构体
+    lv_anim_t a;
+    lv_anim_init(&a);
+    lv_anim_set_var(&a, obj); // 设置动画作用对象
+    lv_anim_set_values(&a, LV_OPA_COVER, LV_OPA_20); // 设置动画起止值：从完全不透明 (255) 到 20% 不透明 (51)
+    lv_anim_set_duration(&a, 300); // 正向播放时长 300ms
+    lv_anim_set_playback_duration(&a, 300); // 反向回弹时长 300ms（即从 20% 再回到 100%）
+    lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE); // 无限循环播放（32位最大值，并不是真正意义上的无限）
+    lv_anim_set_exec_cb(&a, blink_exec_cb); // 设置每一帧的回调函数
+    lv_anim_set_path_cb(&a, lv_anim_path_ease_in_out); // 设置动画路径为缓入缓出，使闪烁更自然
+    lv_anim_start(&a); // 启动动画
+
+    // 退出 LVGL 临界区
+    lvgl_port_unlock();
+}
+
+/**
+ * @brief 停止对象闪烁并恢复完全不透明
+ *
+ * 删除由 blink_exec_cb 驱动的动画，并将对象透明度恢复为完全不透明。
+ * 通常在连接成功、警告解除等场景下调用。
+ *
+ * @param obj 需要停止闪烁的 LVGL 对象
+ *
+ * @note 该函数内部使用 lvgl_port_lock 加锁，可在非 LVGL 任务中安全调用。
+ */
+void xiaozhi_lvgl_stop_blink(lv_obj_t *obj)
+{
+    // 进入 LVGL 临界区
+    lvgl_port_lock(0);
+
+    // 删除该对象上由 blink_exec_cb 驱动的动画
+    lv_anim_delete(obj, blink_exec_cb);
+
+    lv_obj_set_style_opa(obj, LV_OPA_COVER, 0);   // 恢复完全不透明
+
+    // 退出 LVGL 临界区
+    lvgl_port_unlock();
+}
+
+// ------------------------------------------------------------------------------------
 
