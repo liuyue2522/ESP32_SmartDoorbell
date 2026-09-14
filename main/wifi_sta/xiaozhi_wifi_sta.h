@@ -95,7 +95,7 @@
 #define WIFI_FAIL_BIT BIT1
 
 // 1.初始化WIFI_STA模式[MCU去链接AP热点]
-void xiaozhi_wifi_sta_init(void);
+esp_err_t xiaozhi_wifi_sta_init(void);
 
 
 //2.可以擦除flash已有的WIFI账号与密码

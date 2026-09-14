@@ -44,4 +44,10 @@ EMOJI_T emoji_array[21] = {
     {.emotion = "confident", .text = "😏"},
     {.emotion = "sleepy", .text = "😴"},
     {.emotion = "silly", .text = "😜"},
-    {.emotion = "confused", .text = "🙄"}};
+    {.emotion = "confused", .text = "🙄"}
+};
+
+
+
+XIAOZHI_DATA_T xiaozhi_data;
+

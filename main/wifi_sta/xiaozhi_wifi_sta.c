@@ -217,7 +217,7 @@ static void wifi_prov_print_qr(const char *name, const char *username, const cha
 }
 
 // 核心初始化流程
-void xiaozhi_wifi_init_sta(void)
+esp_err_t xiaozhi_wifi_init_sta(void)
 {
     // 1.事件标志组
     s_wifi_event_group = xEventGroupCreate();
@@ -323,24 +323,6 @@ void xiaozhi_wifi_init_sta(void)
                                            pdFALSE,
                                            portMAX_DELAY);
 
-    /* 
-    // 链接成功
-    if (bits & WIFI_CONNECTED_BIT)
-    {
-        ESP_LOGE(TAG, "connected to ap SSID:%s password:%s",
-                 EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
-    }
-    else if (bits & WIFI_FAIL_BIT)
-    {
-        // 链接失败
-        ESP_LOGE(TAG, "Failed to connect to SSID:%s, password:%s",
-                 EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
-    }
-    else
-    {
-        ESP_LOGE(TAG, "UNEXPECTED EVENT");
-    } 
-    */
 
      // 连接成功
     if (bits & WIFI_CONNECTED_BIT)
@@ -350,13 +332,15 @@ void xiaozhi_wifi_init_sta(void)
         ESP_LOGE(TAG, "connected to ap SSID:%s password:%s",
                 cfg.sta.ssid, cfg.sta.password);
         // 更新标题
-        xiaozhi_lvgl_update_title("AI 小智");
+        xiaozhi_lvgl_update_title("WIFI连接成功");
         // wifi连接成功：标题栏停止闪烁
         xiaozhi_lvgl_stop_blink(title);
         // 更新表情
         xiaozhi_lvgl_update_emoji("kissy");
         // 更新对话内容
-        xiaozhi_lvgl_update_dialogue_stream("欢迎使用AI 小智，请问有什么可以帮助您的？");
+        xiaozhi_lvgl_update_dialogue_stream("等待连接服务器...");
+
+        return ESP_OK;
     }
     else if (bits & WIFI_FAIL_BIT) // 链接失败
     {
@@ -377,13 +361,15 @@ void xiaozhi_wifi_init_sta(void)
     {
         ESP_LOGE(TAG, "UNEXPECTED EVENT");
     }
+
+    return ESP_FAIL;
 }
 
 
 
 
 // WIFI_STA模式,让MCU可以去链接热点(路由器本事)
-void xiaozhi_wifi_sta_init(void)
+esp_err_t xiaozhi_wifi_sta_init(void)
 {
     // 1.初始化FLASH： 初始化 NVS（保存 Wi-Fi 配置）
     esp_err_t ret = nvs_flash_init();
@@ -396,7 +382,7 @@ void xiaozhi_wifi_sta_init(void)
     }
 
     // 3.初始化WIFI_STAM模式
-    xiaozhi_wifi_init_sta();
+    return xiaozhi_wifi_init_sta();
 }
 
 // 擦除配网信息

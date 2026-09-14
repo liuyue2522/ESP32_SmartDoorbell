@@ -3,6 +3,7 @@
 #include "xiaozhi_button.h"
 #include "xiaozhi_wifi_sta.h"
 #include "xiaozhi_lvgl.h"
+#include "xiaozhi_http_client.h"
 
 static char *TAG = "xiaozhi_button";
 
@@ -37,7 +38,15 @@ void app_main(void)
     
 
     // 3.目前WIFI_STA模式,只能让咱们当前设备链接AP[JCH 12345678],不支持用户配网
-    xiaozhi_wifi_sta_init();
+    esp_err_t err =  xiaozhi_wifi_sta_init();
+
+
+    // 4. HTTP之POST请求想获取虾哥智能体激活码,webscoket通信服务器地址.....
+    if (err == ESP_OK)
+    {
+        xiaozhi_http_client_init();
+    }
+    
 }
 
 void button_callBack(void *button_handle, void *usr_data)
