@@ -1,7 +1,8 @@
 #include "xiaozhi_http_client.h"
-static const char *TAG = "xiaozhi_http_client";
 
-// ----------------------------------------------------------------------------
+
+// ---------------------------------全局参数-------------------------------------------
+static const char *TAG = "xiaozhi_http_client";
 // mac地址
 uint8_t mac[6];
 // mac地址字符拼接
@@ -10,48 +11,24 @@ char mac_str[18] = {0};
 char uuid[37] = {0};
 // HTTP客户端句柄
 esp_http_client_handle_t http_client;
+
+
+// ---------------------------------函数声明-------------------------------------------
 // HTTP客户端发送请求头的方法
-void xiaozhi_http_client_send_header(void);
+void xiaozhi_http_client_setSend_header(void);
 // HTTP客户端发送请求体的方法
-void xiaozhi_http_client_send_body(void);
+void xiaozhi_http_client_setSend_body(void);
 // JSON形式字符串解析
 void xiaozhi_http_client_json_parse(char *json_str);
+// 生成uuid
+void uuid_v4_generate(char *out);
+
 
 // ----------------------------------------------------------------------------
-
-// uuid
-void uuid_v4_generate(char *out)
-{
-    uint8_t uuid[16];
-
-    // 1. 填充 16 字节随机数
-    esp_fill_random(uuid, sizeof(uuid));
-
-    // 2. 设置版本号：第 7 字节高 4 位 = 0100 (v4)
-    uuid[6] = (uuid[6] & 0x0F) | 0x40;
-
-    // 3. 设置变体：第 9 字节高 2 位 = 10 (RFC 4122)
-    uuid[8] = (uuid[8] & 0x3F) | 0x80;
-
-    // 4. 格式化成 8-4-4-4-12
-    sprintf(out,
-            "%02x%02x%02x%02x-"
-            "%02x%02x-"
-            "%02x%02x-"
-            "%02x%02x-"
-            "%02x%02x%02x%02x%02x%02x",
-            uuid[0], uuid[1], uuid[2], uuid[3],
-            uuid[4], uuid[5],
-            uuid[6], uuid[7],
-            uuid[8], uuid[9],
-            uuid[10], uuid[11], uuid[12],
-            uuid[13], uuid[14], uuid[15]);
-}
-
 // HTTP事件回调
 esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 {
-    // 缓冲区:想要存储HTTP请求服务器返回响应数据
+    // 缓冲区:想要存储HTTP请求服务器返回的响应数据
     static char *output_buffer = NULL;
     // 接收响应数据的长度
     static int output_len = 0;
@@ -75,6 +52,13 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
         // 当服务器响应头数据返回:Content-Length知道服务器返回数据长度,开辟缓冲区准备接受返回数据
         if (strcmp(evt->header_key, "Content-Length") == 0)
         {
+            if (output_buffer != NULL)
+            {
+                // 释放空间
+                heap_caps_free(output_buffer);
+                output_buffer = NULL;
+                output_len = 0;
+            }
             output_buffer = heap_caps_malloc(atoi(evt->header_value) + 1, MALLOC_CAP_SPIRAM);
             if (output_buffer == NULL)
             {
@@ -142,9 +126,9 @@ void xiaozhi_http_client_init(void)
     http_client = esp_http_client_init(&config);
 
     // 发送POST携带参数:请求头+请求体需要携带参数
-    xiaozhi_http_client_send_header();
+    xiaozhi_http_client_setSend_header();
     // 请求体
-    xiaozhi_http_client_send_body();
+    xiaozhi_http_client_setSend_body();
     // 3.想服务器发起HTTP请求【POST】
     // 只要HTTP请求失败,对于用户来说,没有网络,网络有问题!
     while (esp_http_client_perform(http_client) != ESP_OK)
@@ -158,7 +142,7 @@ void xiaozhi_http_client_init(void)
 }
 
 // 请求头
-void xiaozhi_http_client_send_header(void)
+void xiaozhi_http_client_setSend_header(void)
 {
     // 1.携带请求头User-Agent
     esp_http_client_set_header(http_client, "User-Agent", "bread-compact-wifi-128x64/1.0.1");
@@ -176,7 +160,7 @@ void xiaozhi_http_client_send_header(void)
 }
 
 // 请求体
-void xiaozhi_http_client_send_body(void)
+void xiaozhi_http_client_setSend_body(void)
 {
     char body[] = "{\"application\":{\"version\":\"1.0.1\",\"elf_sha256\":\"c8a8ecb6d6fbcda682494d9675cd1ead240ecf38bdde75282a42365a0e396033\"},\"board\":{\"type\":\"bread-compact-wifi\",\"name\":\"bread-compact-wifi-128x64\",\"ssid\":\"卧室\",\"rssi\":-55,\"channel\":1,\"ip\":\"192.168.1.11\",\"mac\":\"%%s\"}}";
     sprintf(body, body, mac_str);
@@ -237,4 +221,33 @@ void xiaozhi_http_client_json_parse(char *json_str)
         // 更新对话内容
         xiaozhi_lvgl_update_dialogue_stream("欢迎使用 AI·小智，请问有什么可以帮助您的？");
     }
+}
+
+// uuid
+void uuid_v4_generate(char *out)
+{
+    uint8_t uuid[16];
+
+    // 1. 填充 16 字节随机数
+    esp_fill_random(uuid, sizeof(uuid));
+
+    // 2. 设置版本号：第 7 字节高 4 位 = 0100 (v4)
+    uuid[6] = (uuid[6] & 0x0F) | 0x40;
+
+    // 3. 设置变体：第 9 字节高 2 位 = 10 (RFC 4122)
+    uuid[8] = (uuid[8] & 0x3F) | 0x80;
+
+    // 4. 格式化成 8-4-4-4-12
+    sprintf(out,
+            "%02x%02x%02x%02x-"
+            "%02x%02x-"
+            "%02x%02x-"
+            "%02x%02x-"
+            "%02x%02x%02x%02x%02x%02x",
+            uuid[0], uuid[1], uuid[2], uuid[3],
+            uuid[4], uuid[5],
+            uuid[6], uuid[7],
+            uuid[8], uuid[9],
+            uuid[10], uuid[11], uuid[12],
+            uuid[13], uuid[14], uuid[15]);
 }
