@@ -16,6 +16,7 @@ idf_component_register(
         "./lvgl/xiaozhi_lvgl.c"
         "./com/xiaozhi_data.c"
         "./http/xiaozhi_http_client.c"
+        "./audio/xiaozhi_audio.c"
     INCLUDE_DIRS
         "."
         "./button"
@@ -24,6 +25,7 @@ idf_component_register(
         "./lvgl"
         "./com"
         "./http"
+        "./audio"
         EMBED_FILES ${IMAGE_FILE}
 )
 

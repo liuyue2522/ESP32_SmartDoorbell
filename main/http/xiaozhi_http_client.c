@@ -87,11 +87,12 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
         // 请求结束
     case HTTP_EVENT_ON_FINISH:
         ESP_LOGI(TAG, "HTTP_EVENT_ON_FINISH");
-        // JSON形式字符串解析:解析JSON形式字符串务必在缓冲区空间释放之前解决掉
-        xiaozhi_http_client_json_parse(output_buffer);
         // 请求结束缓冲区空间需要释放
         if (output_buffer)
         {
+            output_buffer[output_len] = '\0';   // 关键：添加字符串结束符
+            // JSON形式字符串解析:解析JSON形式字符串务必在缓冲区空间释放之前解决掉
+            xiaozhi_http_client_json_parse(output_buffer);
             // 释放空间
             heap_caps_free(output_buffer);
             output_buffer = NULL;
@@ -162,8 +163,12 @@ void xiaozhi_http_client_setSend_header(void)
 // 请求体
 void xiaozhi_http_client_setSend_body(void)
 {
-    char body[] = "{\"application\":{\"version\":\"1.0.1\",\"elf_sha256\":\"c8a8ecb6d6fbcda682494d9675cd1ead240ecf38bdde75282a42365a0e396033\"},\"board\":{\"type\":\"bread-compact-wifi\",\"name\":\"bread-compact-wifi-128x64\",\"ssid\":\"卧室\",\"rssi\":-55,\"channel\":1,\"ip\":\"192.168.1.11\",\"mac\":\"%s\"}}";
-    sprintf(body, body, mac_str);
+    static char body[512];
+    snprintf(body, sizeof(body),
+        "{\"application\":{\"version\":\"1.0.1\",\"elf_sha256\":\"c8a8ecb6...\"},"
+        "\"board\":{\"type\":\"bread-compact-wifi\",\"name\":\"bread-compact-wifi-128x64\","
+        "\"ssid\":\"卧室\",\"rssi\":-55,\"channel\":1,\"ip\":\"192.168.1.11\",\"mac\":\"%s\"}}",
+        mac_str);
     // 请求体携带参数
     esp_http_client_set_post_field(http_client, body, strlen(body));
 }
@@ -174,28 +179,38 @@ void xiaozhi_http_client_json_parse(char *json_str)
     if (json_str == NULL)
     {
         // 说明当前设备已激活
-        xiaozhi_lvgl_update_title("json数据解析失败");
+        xiaozhi_lvgl_update_title("json_str 字符串为空");
         xiaozhi_lvgl_update_emoji("crying");
         xiaozhi_lvgl_update_dialogue("请联系管理员");
-        ESP_LOGE(TAG, "json_str is NULL");
+        ESP_LOGE(TAG, "json_str 字符串为空");
         return;
     }
     // 1.将字符串[JSON形式],转化为CJSON结构体
     cJSON *root = cJSON_Parse(json_str);
-    // 提取webscoket、activation
-    cJSON *webscoket = cJSON_GetObjectItem(root, "webscoket");
+    if (root == NULL) {
+        xiaozhi_lvgl_update_title("json数据解析失败");
+        xiaozhi_lvgl_update_emoji("crying");
+        xiaozhi_lvgl_update_dialogue("请联系管理员");
+        ESP_LOGE(TAG, "JSON 解析失败");
+        return;
+    }
+    // 提取websocket、activation
+    cJSON *websocket = cJSON_GetObjectItem(root, "websocket");
     cJSON *activation = cJSON_GetObjectItem(root, "activation");
     // 提取对话websocket服务器信息
-    if (webscoket != NULL)
+    if (websocket != NULL)
     {
         // 对话服务器地址【websocket协议】
-        char *url = cJSON_GetObjectItem(webscoket, "url")->valuestring;
-        char *token = cJSON_GetObjectItem(webscoket, "token")->valuestring;
+        char *url = cJSON_GetObjectItem(websocket, "url")->valuestring;
+        char *token = cJSON_GetObjectItem(websocket, "token")->valuestring;
         ESP_LOGE(TAG, "url:%s,token:%s", url, token);
 
         // 存储到结构体成员中，将来别的组件使用，引入 xiaozhi_data.h 头文件即可
-        xiaozhi_data.websocket_url = url;
-        xiaozhi_data.token = token;
+        strncpy(xiaozhi_data.websocket_url, url, sizeof(xiaozhi_data.websocket_url) - 1);
+        xiaozhi_data.websocket_url[sizeof(xiaozhi_data.websocket_url) - 1] = '\0';
+
+        strncpy(xiaozhi_data.token, token, sizeof(xiaozhi_data.token) - 1);
+        xiaozhi_data.token[sizeof(xiaozhi_data.token) - 1] = '\0';
     }
 
     // 提取激活码字段:可能有、可能无
@@ -221,6 +236,9 @@ void xiaozhi_http_client_json_parse(char *json_str)
         // 更新对话内容
         xiaozhi_lvgl_update_dialogue_stream("欢迎使用 AI·小智，请问有什么可以帮助您的？");
     }
+
+    //释放json对象内存：  递归释放整棵树，包括所有子节点、键名、字符串值等。单独释放子节点反而会导致双重释放（double free）和程序崩溃。
+    cJSON_Delete(root);
 }
 
 // uuid

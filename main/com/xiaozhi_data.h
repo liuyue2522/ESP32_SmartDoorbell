@@ -20,8 +20,8 @@ extern EMOJI_T emoji_array[21];
 typedef struct
 {
     // 存储 websocker 服务器相关信息
-    char *websocket_url;
-    char *token;
+    char websocket_url[256];
+    char token[128];
 } XIAOZHI_DATA_T;
 
 extern XIAOZHI_DATA_T xiaozhi_data;

@@ -4,15 +4,16 @@
 #include "xiaozhi_wifi_sta.h"
 #include "xiaozhi_lvgl.h"
 #include "xiaozhi_http_client.h"
+#include "xiaozhi_audio.h"
 
-static char *TAG = "xiaozhi_button";
+static char *TAG = "xiaozhi_main";
 
 // 按键回调
 void button_callBack(void *button_handle, void *usr_data);
 
 void app_main(void)
 {
-    // 0.初始化LVGL
+    /* // 0.初始化LVGL
     xiaozhi_lvgl_init();
     // 1. lvgl屏幕布局
     xiaozhi_lvgl_layout();
@@ -45,8 +46,22 @@ void app_main(void)
     if (err == ESP_OK)
     {
         xiaozhi_http_client_init();
+    } */
+
+    // 5.录制和播放音频
+    xiaozhi_audio_init();
+    static char data[1024] = {0};
+    while (1)
+    {
+        ESP_LOGE(TAG, "录音开始");
+        xiaozhi_audio_record(data, sizeof(data));
+        ESP_LOGE(TAG, "录音结束");
+        ESP_LOGE(TAG, "播放开始");
+        xiaozhi_audio_play(data, sizeof(data));
+        ESP_LOGE(TAG, "播放结束");
+
+        ESP_LOGI(TAG, "main stack high water mark: %u", uxTaskGetStackHighWaterMark(NULL));
     }
-    
 }
 
 void button_callBack(void *button_handle, void *usr_data)

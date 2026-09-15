@@ -19,3 +19,5 @@ dependencies:
   esp_jpeg: '>=1.0.2'
   espressif/esp_lvgl_port: ^2.9.0
   78/xiaozhi-fonts: ^1.5.5
+  espressif/esp_codec_dev: ^1.6.2
+  espressif/esp-sr: ^2.5.3
