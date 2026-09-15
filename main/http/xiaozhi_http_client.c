@@ -201,16 +201,31 @@ void xiaozhi_http_client_json_parse(char *json_str)
     if (websocket != NULL)
     {
         // 对话服务器地址【websocket协议】
-        char *url = cJSON_GetObjectItem(websocket, "url")->valuestring;
-        char *token = cJSON_GetObjectItem(websocket, "token")->valuestring;
-        ESP_LOGE(TAG, "url:%s,token:%s", url, token);
+        cJSON *url_item = cJSON_GetObjectItem(websocket, "url");
+        if (url_item && cJSON_IsString(url_item)) {
+            char *url = cJSON_GetObjectItem(websocket, "url")->valuestring;
+            // 存储到结构体成员中，将来别的组件使用，引入 xiaozhi_data.h 头文件即可
+            strncpy(xiaozhi_data.websocket_url, url, sizeof(xiaozhi_data.websocket_url) - 1);
+            xiaozhi_data.websocket_url[sizeof(xiaozhi_data.websocket_url) - 1] = '\0';
+            ESP_LOGI(TAG, "websocket_url: %s", xiaozhi_data.websocket_url);
+        }
+        else
+        {
+            ESP_LOGE(TAG, "websocket url not found");
+        }
 
-        // 存储到结构体成员中，将来别的组件使用，引入 xiaozhi_data.h 头文件即可
-        strncpy(xiaozhi_data.websocket_url, url, sizeof(xiaozhi_data.websocket_url) - 1);
-        xiaozhi_data.websocket_url[sizeof(xiaozhi_data.websocket_url) - 1] = '\0';
-
-        strncpy(xiaozhi_data.token, token, sizeof(xiaozhi_data.token) - 1);
-        xiaozhi_data.token[sizeof(xiaozhi_data.token) - 1] = '\0';
+        cJSON *token_item = cJSON_GetObjectItem(websocket, "token");
+        if (token_item && cJSON_IsString(token_item)) {
+            char *token = cJSON_GetObjectItem(websocket, "token")->valuestring;
+            // 存储到结构体成员中，将来别的组件使用，引入 xiaozhi_data.h 头文件即可
+            strncpy(xiaozhi_data.token, token, sizeof(xiaozhi_data.token) - 1);
+            xiaozhi_data.token[sizeof(xiaozhi_data.token) - 1] = '\0';
+            ESP_LOGI(TAG, "token: %s", xiaozhi_data.token);
+        }
+        else
+        {
+            ESP_LOGE(TAG, "token not found");
+        }
     }
 
     // 提取激活码字段:可能有、可能无
