@@ -162,7 +162,7 @@ void xiaozhi_http_client_setSend_header(void)
 // 请求体
 void xiaozhi_http_client_setSend_body(void)
 {
-    char body[] = "{\"application\":{\"version\":\"1.0.1\",\"elf_sha256\":\"c8a8ecb6d6fbcda682494d9675cd1ead240ecf38bdde75282a42365a0e396033\"},\"board\":{\"type\":\"bread-compact-wifi\",\"name\":\"bread-compact-wifi-128x64\",\"ssid\":\"卧室\",\"rssi\":-55,\"channel\":1,\"ip\":\"192.168.1.11\",\"mac\":\"%%s\"}}";
+    char body[] = "{\"application\":{\"version\":\"1.0.1\",\"elf_sha256\":\"c8a8ecb6d6fbcda682494d9675cd1ead240ecf38bdde75282a42365a0e396033\"},\"board\":{\"type\":\"bread-compact-wifi\",\"name\":\"bread-compact-wifi-128x64\",\"ssid\":\"卧室\",\"rssi\":-55,\"channel\":1,\"ip\":\"192.168.1.11\",\"mac\":\"%s\"}}";
     sprintf(body, body, mac_str);
     // 请求体携带参数
     esp_http_client_set_post_field(http_client, body, strlen(body));
