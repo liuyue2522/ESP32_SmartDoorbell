@@ -5,14 +5,27 @@
 #include "xiaozhi_lvgl.h"
 #include "xiaozhi_http_client.h"
 #include "xiaozhi_sr.h"
+#include "xiaozhi_data.h"
+#include "xiaozhi_encoder.h"
 
 static char *TAG = "xiaozhi_main";
 
 // 按键回调
 void button_callBack(void *button_handle, void *usr_data);
 
+// SR的声学前端检测到唤醒词回调函数
+void wakeup_callback(void);
+// VAD状态变化回调函数
+void vad_state_callback(void);
+
+// -------------------------------------------------------------
+
 void app_main(void)
 {
+
+    xiaozhi_data.wakeup_callback = wakeup_callback;
+    xiaozhi_data.vad_state_callback = vad_state_callback;
+
     // 0.初始化LVGL
     xiaozhi_lvgl_init();
     // 1. lvgl屏幕布局
@@ -48,9 +61,14 @@ void app_main(void)
         xiaozhi_http_client_init();
     }
 
-    //5.语音识别模块SR初始化
+    // 5.语音识别模块SR初始化
     xiaozhi_sr_init();
+
+    // 6.初始化opus编码器
+    xiaozhi_encoder_init();
 }
+
+//-----------------------------------------------------------------------------------------
 
 void button_callBack(void *button_handle, void *usr_data)
 {
@@ -72,4 +90,15 @@ void button_callBack(void *button_handle, void *usr_data)
     default:
         break;
     }
+}
+
+// 检测到唤醒词执行一次
+void wakeup_callback(void)
+{
+    ESP_LOGE(TAG, "MAIN wakeup_callback");
+}
+// 语音状态检测变化回调
+void vad_state_callback(void)
+{
+    ESP_LOGE(TAG, "MAIN vad_state_callback");
 }

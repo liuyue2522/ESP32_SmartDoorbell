@@ -48,7 +48,7 @@ void xiaozhi_sr_init(void)
     // 更多的内存分配到外部的sram里去
     afe_config->memory_alloc_mode = AFE_MEMORY_ALLOC_MORE_PSRAM;
     // 语音状态检测灵敏度设置,风吹草动不能误判人说话!!!!
-    afe_config->vad_mode = VAD_MODE_3;
+    afe_config->vad_mode = VAD_MODE_4;
 
     afe_config_free(afe_config);
 
@@ -88,23 +88,46 @@ void detect_task(void *params)
         // 持续获取语音识别结果
         afe_fetch_result_t *result = afe_handle->fetch(afe_data);
 
-        // 检测唤醒
-        if (result->wakeup_state == WAKENET_DETECTED)
+        // 检测到唤醒词
+        if (result->wakeup_state == WAKENET_DETECTED) // wakeup_state 判断是否检测到唤醒词
         {
             // 唤醒词检测成功
             ESP_LOGE(TAG, "唤醒词检测成功+++++++++++++++++++++++++++++++++++++++++++++++++++++");
+
+            // 全局标志位变为1
+            xiaozhi_data.wakeup_flag = 1; // SR的AFE声学前端确实检测到唤醒词
+
+            // 当检测到唤醒词以后,唤醒词回调函数执行!别的组件可以得知检测到唤醒词
+            if (xiaozhi_data.wakeup_callback != NULL)
+            {
+                xiaozhi_data.wakeup_callback();
+            }
         }
 
-        // 语音状态判断
-        if (result->vad_state == VAD_SPEECH)
+        /*
+           1.检测到唤醒词目的,websocket客户端与虾哥服务器建立连接
+           2.后续建立连接,想客户端给虾哥服务器发送音频数据,不说你想发就发的！
+           3.后续想让虾哥服务器可以接受音频数据、解析音频内容,webscoket客户端给    "开始监听指令"
+           4.后续客户端静音,不在给虾哥服务器传递音频数据,webscoket客户端给        "停止监听指令"
+           5.SR的声学前端可以检测语音状态变化
+                1.静音0->说话1    它发送监听指令
+                2.说话1->静音0    它发送停止监听指令
+        */
+        if (xiaozhi_data.wakeup_flag)
         {
-            ESP_LOGE(TAG, "检测到人说话--------------------------------------------------------");
-            xiaozhi_audio_play(result->data, result->data_size);
-        }
-        //语音状态判断
-        if (result->vad_state == VAD_SILENCE)
-        {
-            ESP_LOGE(TAG, "静音!!!!!!!!!!!!!!!!!!!!!!");
+            // 存储当前语音状态
+            xiaozhi_data.current_vad_state = result->vad_state; // vad_state 判断是否检测到语音
+            // 当前语音状态与上一次语音状态不一样,执行语音状态变化回调
+            if (xiaozhi_data.current_vad_state != xiaozhi_data.last_vad_state)
+            {
+                // 执行语音状态发生变化回调
+                if (xiaozhi_data.vad_state_callback != NULL)
+                {
+                    xiaozhi_data.vad_state_callback();
+                }
+            }
+            // 更新上一次语音状态
+            xiaozhi_data.last_vad_state = xiaozhi_data.current_vad_state;
         }
     }
 }

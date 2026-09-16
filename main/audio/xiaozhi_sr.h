@@ -17,6 +17,9 @@
 /* 自定义声音采集 */
 #include "xiaozhi_audio.h"
 
+/* 小智数据存储结构体 */
+#include "xiaozhi_data.h"
+
 // 1.语音识别AFE声学前端初始化
 void xiaozhi_sr_init(void);
 
