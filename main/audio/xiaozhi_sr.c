@@ -31,10 +31,7 @@ void xiaozhi_sr_init(void)
     //  AFE_TYPE_SR:场景选择,语音识别场景、 AFE_TYPE_VC 语音通话场景
     // AFE_MODE_HIGH_PERF:高性能,吃内存，吃算力,但是识别度高一些!
     afe_config_t *afe_config = afe_config_init("M", models, AFE_TYPE_SR, AFE_MODE_HIGH_PERF);
-    // 创建AFE声学前端句柄
-    afe_handle = esp_afe_handle_from_config(afe_config);
-    // FAE声学前端:音频数据相关进行初始化
-    afe_data = afe_handle->create_from_config(afe_config);
+
     // 添加优化配置,语音识别更准一些
     //   关闭一些硬件上本来就不支持的功能 免得出现反效果
     afe_config->aec_init = false; // 禁用回声消除
@@ -50,6 +47,12 @@ void xiaozhi_sr_init(void)
     // 语音状态检测灵敏度设置,风吹草动不能误判人说话!!!!
     afe_config->vad_mode = VAD_MODE_4;
 
+    // 创建AFE声学前端句柄
+    afe_handle = esp_afe_handle_from_config(afe_config);
+    // FAE声学前端:音频数据相关进行初始化
+    afe_data = afe_handle->create_from_config(afe_config);
+   
+    // 释放AFE声前端句柄: 内存释放函数。释放由afe_config_init()函数分配的内存。
     afe_config_free(afe_config);
 
     // 1.1任务,给AFE喂数据PCM音频数据
@@ -60,19 +63,19 @@ void xiaozhi_sr_init(void)
     xTaskCreatePinnedToCoreWithCaps(detect_task, "detect", 32 * 1024, NULL, 5, NULL, 1, MALLOC_CAP_SPIRAM);
 }
 
+// 给AFE喂数据PCM音频数据
 void feed_task(void *params)
 {
     // AFE声学前端算法:每一次喂数据的采样点个数:512采样点
     int feed_chunksize = afe_handle->get_feed_chunksize(afe_data);
-    ESP_LOGE(TAG, "feed_chunksize:%d", feed_chunksize);
+    ESP_LOGE(TAG, "feed_chunksize 采样点个数:%d", feed_chunksize);
     // AFE声学前端喂数据使用几个通道
     int feed_nch = afe_handle->get_feed_channel_num(afe_data);
-    ESP_LOGE(TAG, "feed_nch:%d", feed_nch);
+    ESP_LOGE(TAG, "feed_nch 通道数:%d", feed_nch);
     // 创建一个存储PCM音频数据缓冲区
     int16_t *feed_buff = heap_caps_malloc(feed_chunksize * feed_nch * sizeof(int16_t), MALLOC_CAP_SPIRAM);
     while (1)
     {
-
         // ES8311获取麦克风录制PCM音频数据
         xiaozhi_audio_record(feed_buff, feed_chunksize * feed_nch * sizeof(int16_t));
 
@@ -81,6 +84,7 @@ void feed_task(void *params)
     }
 }
 
+// 提取识别结果
 void detect_task(void *params)
 {
     while (1)
@@ -128,6 +132,26 @@ void detect_task(void *params)
             }
             // 更新上一次语音状态
             xiaozhi_data.last_vad_state = xiaozhi_data.current_vad_state;
+        }
+
+        // freeRTOS任务之间通信:向不可分割环形缓冲区,扔 PCM 原始音频数据!
+        // 检测到唤醒词 + 有人说话,扔到缓冲区给编码器,让它编码
+        if (xiaozhi_data.wakeup_flag && xiaozhi_data.current_vad_state == VAD_SPEECH)
+        {
+            /* 1. VAD（语音活动检测）不是瞬间就能判断出“有人开始说话了”。
+            它需要分析一小段音频（通常几十毫秒）才能确认语音开始。但在他确认的这一刻，语音实际上已经开始了。 */
+            /* 2. AFE 的解决方案是：在内部维护一个环形缓存，持续保存最近的音频帧。
+            当 VAD 确认语音开始时，把缓存里语音开头那部分一起交出来，这样就不会丢字。 */
+            if (result->vad_cache_size)
+            {
+                //AFE算法有延迟期,前面语音包!
+                /* AFE 处理的帧：32ms */
+                xRingbufferSend(xiaozhi_data.sr_to_encoder_handle, result->vad_cache, result->vad_cache_size, portMAX_DELAY);
+            }
+
+            // 向不可分割环形缓冲区扔数据
+            // 1.哪一个缓冲区 2.添加缓冲区数据 3.添加缓冲区数据大小 4.添加缓冲区超时时间
+            xRingbufferSend(xiaozhi_data.sr_to_encoder_handle, result->data, result->data_size, portMAX_DELAY);
         }
     }
 }

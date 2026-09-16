@@ -1,8 +1,9 @@
 #ifndef __XIAOZHI_DATA_H__
 #define __XIAOZHI_DATA_H__
 
-#include "stdbool.h"
-#include "esp_vad.h"
+#include "stdbool.h" // 布尔类型
+#include "esp_vad.h" // 语音激活检测
+#include "freertos/ringbuf.h" // 环形缓冲区
 
 // 定义结构体:表示表情
 typedef struct
@@ -34,6 +35,9 @@ typedef struct
     vad_state_t last_vad_state;
     // 注册语音状态发生变化的回调
     void (*vad_state_callback)(void);
+
+    // SR组件的任务 与 编码器的任务通信缓冲区句柄
+    RingbufHandle_t sr_to_encoder_handle;
 
 } XIAOZHI_DATA_T;
 

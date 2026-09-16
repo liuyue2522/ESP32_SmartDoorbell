@@ -37,10 +37,10 @@ void xiaozhi_encoder_init(void)
 
     // 3.根据顶部参数:咱们可以获取到需要 PCM 帧 原始音频数据字节个数、编码完成opus音频字节个数
     esp_opus_enc_get_frame_size(encoder, &pcm_size, &opus_size);
-    ESP_LOGE(TAG, "PCM原始音频数据字节个数:%d,编码完成opus音频字节个数:%d", pcm_size, opus_size);
+    ESP_LOGE(TAG, "PCM原始音频数据字节个数:%d, 编码完成opus音频字节个数:%d", pcm_size, opus_size);
 
 
-    // 4.编码器需要PCM与OPUS音频数据缓冲区创建
+    // 4.编码器需要创建 PCM 与 OPUS 音频数据缓冲区
     pcm_buffer = heap_caps_malloc(pcm_size, MALLOC_CAP_SPIRAM);
     opus_buffer = heap_caps_malloc(opus_size, MALLOC_CAP_SPIRAM);
 
@@ -49,6 +49,47 @@ void xiaozhi_encoder_init(void)
     // 2.处理音频数据【60ms->1920字节】
     xTaskCreatePinnedToCoreWithCaps(encoder_task, "encoder", 32 * 1024, NULL, 5, NULL, 1, MALLOC_CAP_SPIRAM);
 }
+
+/* void encoder_task(void *params)
+{
+    // 输入数据帧信息:PCM原始音频数据
+    // 每一次:都是一个60msPCM数据帧进行编码
+    esp_audio_enc_in_frame_t pcm_frame = {
+        .buffer = pcm_buffer, // buffer: 存储 1 个数据帧【1920 字节】,每一次找到要进行编码数据帧首个字节地址
+        .len = pcm_size,      // 每一次处理PCM音频数据字节个数
+    };
+
+    // 输出的数据帧信息:OPUS编码后的数据
+    esp_audio_enc_out_frame_t opus_frame = {
+        .buffer = opus_buffer, // 指向编码缓冲区首地址
+        .len = opus_size,      // 编码缓冲区的大小, encoded_bytes成员是实际编码出来音频数据字节个数
+    };
+    while (1)
+    {
+        // 服务器需要帧长:60ms,1920字节,每一次需要从环形缓冲区提取 PCM 1920字节,编码出 opus 370字节压缩音频数据
+        size_t receive_len = 0;
+        size_t hope_size = pcm_size; // 期望从缓冲区提取出来的字节个数1920
+        uint8_t *encoder_ptr = pcm_buffer;
+
+        while (hope_size > 0)
+        {
+            uint8_t *data = xRingbufferReceive(xiaozhi_data.sr_to_encoder_handle, &receive_len, portMAX_DELAY);
+            memcpy(encoder_ptr, data, receive_len);
+            // 更新指针地址
+            encoder_ptr += receive_len;
+            // 更新期望获取字节个数
+            hope_size -= receive_len;
+            // 每一次提取数据,需要通知缓冲区进行释放
+            vRingbufferReturnItem(xiaozhi_data.sr_to_encoder_handle, data);
+        }
+
+        // 进行PCM数据转OPUS进行编码
+        esp_opus_enc_process(encoder, &pcm_frame, &opus_frame);
+
+        // 执行到这里:一个帧长位60ms【1920PCM字节数据】,已经编码完成370字节OPUS数据
+        ESP_LOGI(TAG, "encoder stack high water mark: %u", uxTaskGetStackHighWaterMark(NULL));
+    }
+} */
 
 void encoder_task(void *params)
 {
@@ -66,8 +107,34 @@ void encoder_task(void *params)
     };
     while (1)
     {
+        // 服务器需要帧长:60ms,1920字节,每一次需要从环形缓冲区提取 PCM 1920字节,编码出 opus 370字节压缩音频数据
+        size_t hope_size = pcm_size; // 期望从缓冲区提取出来的字节个数1920
+        uint8_t *encoder_ptr = pcm_buffer;
+
+        while (hope_size > 0)
+        {
+            size_t receive_len = 0; // 实际从缓冲区提取出来的字节个数
+            uint8_t *data = xRingbufferReceiveUpTo(xiaozhi_data.sr_to_encoder_handle, &receive_len, portMAX_DELAY, hope_size);   // 最多只读剩余需要的字节数，绝不越界
+            if (data == NULL) {
+                ESP_LOGE(TAG, "环形缓冲区接收失败");
+                break;
+            }
+
+            memcpy(encoder_ptr, data, receive_len);
+            // 更新指针地址
+            encoder_ptr += receive_len;
+            // 更新期望获取字节个数
+            hope_size -= receive_len;
+            // 每一次提取数据,需要通知缓冲区进行释放
+            vRingbufferReturnItem(xiaozhi_data.sr_to_encoder_handle, data);
+        }
 
         // 进行PCM数据转OPUS进行编码
-        esp_aac_enc_process(encoder, &pcm_frame, &opus_frame);
+        esp_opus_enc_process(encoder, &pcm_frame, &opus_frame);
+
+        // 执行到这里:一个帧长位60ms【1920PCM字节数据】,已经编码完成370字节OPUS数据
+
+        // 打印当前任务堆栈使用情况
+        // ESP_LOGI(TAG, "encoder stack high water mark: %u", uxTaskGetStackHighWaterMark(NULL));
     }
 }

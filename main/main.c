@@ -18,10 +18,15 @@ void wakeup_callback(void);
 // VAD状态变化回调函数
 void vad_state_callback(void);
 
+// 创建项目中需要使用的环形缓冲区
+static void xiaozhi_ringbuf_init(void);
+
 // -------------------------------------------------------------
 
 void app_main(void)
 {
+    // 项目中任务通信需要使用到的消息队列【环形缓冲区】
+    xiaozhi_ringbuf_init();
 
     xiaozhi_data.wakeup_callback = wakeup_callback;
     xiaozhi_data.vad_state_callback = vad_state_callback;
@@ -101,4 +106,18 @@ void wakeup_callback(void)
 void vad_state_callback(void)
 {
     ESP_LOGE(TAG, "MAIN vad_state_callback");
+
+    // 清除唤醒标志
+    xiaozhi_data.wakeup_flag = 0;
+}
+
+// 任务间通信使用缓冲区
+static void xiaozhi_ringbuf_init(void)
+{
+
+    // 创建唤醒缓冲区:不可分割、可分割、字节流
+    // 环形缓冲区大小:根据用户能接收到的语音延迟时间设计! 100-200ms
+    // 1920->60ms: 200ms->4数据帧 缓冲缓冲区:(1920 * 4)/1024 = 7.5K
+    // xiaozhi_data.sr_to_encoder_handle = xRingbufferCreateWithCaps(8 * 1024, RINGBUF_TYPE_NOSPLIT, MALLOC_CAP_SPIRAM);
+    xiaozhi_data.sr_to_encoder_handle = xRingbufferCreateWithCaps(8 * 1024, RINGBUF_TYPE_BYTEBUF, MALLOC_CAP_SPIRAM);
 }

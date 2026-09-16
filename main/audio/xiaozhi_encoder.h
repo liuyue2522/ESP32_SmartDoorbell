@@ -6,15 +6,12 @@
 #include "esp_log.h" // 日志
 #include "esp_heap_caps.h" // 内存
 #include "freertos/idf_additions.h" // freertos
+#include "xiaozhi_data.h" // 数据
+#include "string.h" // 字符串
 
 
 //1.初始化OPUS编码器
 void xiaozhi_encoder_init(void);
-
-
-
-
-
 
 
 /**
