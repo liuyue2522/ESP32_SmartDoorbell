@@ -17,6 +17,7 @@ idf_component_register(
         "./com/xiaozhi_data.c"
         "./http/xiaozhi_http_client.c"
         "./audio/xiaozhi_audio.c"
+        "./audio/xiaozhi_sr.c"
     INCLUDE_DIRS
         "."
         "./button"

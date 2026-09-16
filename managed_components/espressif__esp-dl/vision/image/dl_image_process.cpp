@@ -513,7 +513,7 @@ void ImageTransformer::gen_xy_map()
             m_scale_x = m_scale_y = m_inv_scale_x = m_inv_scale_y = 1;
             return;
         }
-        m_x = (int *)heap_caps_malloc(dst_width * sizeof(int), MALLOC_CAP_DEFAULT); 
+        m_x = (int *)heap_caps_malloc(dst_width * sizeof(int), MALLOC_CAP_DEFAULT);
         m_y = (int *)heap_caps_malloc(dst_height * sizeof(int), MALLOC_CAP_DEFAULT);
         m_inv_scale_x = static_cast<float>(src_width) / dst_width;
         m_inv_scale_y = static_cast<float>(src_height) / dst_height;
