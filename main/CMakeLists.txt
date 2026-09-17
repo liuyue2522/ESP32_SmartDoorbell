@@ -19,6 +19,7 @@ idf_component_register(
         "./audio/xiaozhi_audio.c"
         "./audio/xiaozhi_sr.c"
         "./audio/xiaozhi_encoder.c"
+        "./audio/xiaozhi_decoder.c"
     INCLUDE_DIRS
         "."
         "./button"

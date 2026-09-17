@@ -1,4 +1,5 @@
 #include "xiaozhi_audio.h"
+
 // I2C句柄
 static i2c_master_bus_handle_t i2c_bus_handle;
 // ES8311编解码器句柄
@@ -10,10 +11,53 @@ i2s_chan_handle_t rx_handle;
 
 // -----------------------------------------------------------------------
 
-// 初始化I2C
-static void xiaozhi_audio_i2c_init(void);
-// 初始化I2S
-static void xiaozhi_audio_i2s_init(void);
+static void xiaozhi_audio_i2c_init(void)
+{
+    i2c_master_bus_config_t i2c_bus_config = {0};
+    // I2C时钟源
+    i2c_bus_config.clk_source = I2C_CLK_SRC_DEFAULT;
+    // I2C_0,ESP32S3拥有两个I2C
+    i2c_bus_config.i2c_port = I2C_NUM_0;
+    // I2C的时钟线对应IO引脚
+    i2c_bus_config.scl_io_num = GPIO_NUM_1;
+    // I2C的数据线对应IO引脚
+    i2c_bus_config.sda_io_num = GPIO_NUM_0;
+    // I2C一般开漏,需要上拉电阻
+    i2c_bus_config.flags.enable_internal_pullup = true;
+    // glitch_ignore_cnt 用于配置 I2C 总线硬件滤波器，过滤掉总线上持续时间短于设定值的尖峰脉冲干扰，防止毛刺被误识别为正常的时钟或数据信号。
+    i2c_bus_config.glitch_ignore_cnt = 7;
+    // 初始化I2C
+    i2c_new_master_bus(&i2c_bus_config, &i2c_bus_handle);
+}
+
+// 初始化I2S:传输音频数据
+static void xiaozhi_audio_i2s_init(void)
+{
+    // I2S协议通道相关配置
+    // I2S0,通信作为主设备
+    i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_0, I2S_ROLE_MASTER);
+    // I2S通信需要用到的GPIO引脚
+    i2s_std_config_t std_cfg = {
+        .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(16000),                            // I2S音频采样频率16KHZ
+        .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(16, I2S_SLOT_MODE_MONO), // 采样位深16bit,单声道
+        .gpio_cfg = {
+            .mclk = GPIO_NUM_3,
+            .bclk = GPIO_NUM_2,
+            .ws = GPIO_NUM_5,
+            .dout = GPIO_NUM_6,
+            .din = GPIO_NUM_4,
+        },
+    };
+    // I2S收发配置
+    i2s_new_channel(&chan_cfg, &tx_handle, &rx_handle);
+    // I2S按照:五个引脚,采样率16KZ,位深16,收发数据
+    i2s_channel_init_std_mode(tx_handle, &std_cfg);
+    i2s_channel_init_std_mode(rx_handle, &std_cfg);
+    // I2S收发使能
+    i2s_channel_enable(tx_handle);
+    i2s_channel_enable(rx_handle);
+}
+
 
 //------------------------------------------------------------------------
 
@@ -91,49 +135,3 @@ void xiaozhi_audio_record(void *buf, int len)
 
 //------------------------------------------------------------------------
 
-static void xiaozhi_audio_i2c_init(void)
-{
-    i2c_master_bus_config_t i2c_bus_config = {0};
-    // I2C时钟源
-    i2c_bus_config.clk_source = I2C_CLK_SRC_DEFAULT;
-    // I2C_0,ESP32S3拥有两个I2C
-    i2c_bus_config.i2c_port = I2C_NUM_0;
-    // I2C的时钟线对应IO引脚
-    i2c_bus_config.scl_io_num = GPIO_NUM_1;
-    // I2C的数据线对应IO引脚
-    i2c_bus_config.sda_io_num = GPIO_NUM_0;
-    // I2C一般开漏,需要上拉电阻
-    i2c_bus_config.flags.enable_internal_pullup = true;
-    // glitch_ignore_cnt 用于配置 I2C 总线硬件滤波器，过滤掉总线上持续时间短于设定值的尖峰脉冲干扰，防止毛刺被误识别为正常的时钟或数据信号。
-    i2c_bus_config.glitch_ignore_cnt = 7;
-    // 初始化I2C
-    i2c_new_master_bus(&i2c_bus_config, &i2c_bus_handle);
-}
-
-// 初始化I2S:传输音频数据
-static void xiaozhi_audio_i2s_init(void)
-{
-    // I2S协议通道相关配置
-    // I2S0,通信作为主设备
-    i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_0, I2S_ROLE_MASTER);
-    // I2S通信需要用到的GPIO引脚
-    i2s_std_config_t std_cfg = {
-        .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(16000),                            // I2S音频采样频率16KHZ
-        .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(16, I2S_SLOT_MODE_MONO), // 采样位深16bit,单声道
-        .gpio_cfg = {
-            .mclk = GPIO_NUM_3,
-            .bclk = GPIO_NUM_2,
-            .ws = GPIO_NUM_5,
-            .dout = GPIO_NUM_6,
-            .din = GPIO_NUM_4,
-        },
-    };
-    // I2S收发配置
-    i2s_new_channel(&chan_cfg, &tx_handle, &rx_handle);
-    // I2S按照:五个引脚,采样率16KZ,位深16,收发数据
-    i2s_channel_init_std_mode(tx_handle, &std_cfg);
-    i2s_channel_init_std_mode(rx_handle, &std_cfg);
-    // I2S收发使能
-    i2s_channel_enable(tx_handle);
-    i2s_channel_enable(rx_handle);
-}

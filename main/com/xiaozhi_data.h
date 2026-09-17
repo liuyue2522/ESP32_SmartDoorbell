@@ -36,8 +36,13 @@ typedef struct
     // 注册语音状态发生变化的回调
     void (*vad_state_callback)(void);
 
-    // SR组件的任务 与 编码器的任务通信缓冲区句柄
+    // SR组件的任务 与 编码器的任务 通信缓冲区句柄
     RingbufHandle_t sr_to_encoder_handle;
+    //encoder与ws通信使用缓冲区
+    RingbufHandle_t encoder_to_ws_handle;
+    //ws与解码器使用缓冲区
+    RingbufHandle_t ws_to_decoder_handle;
+
 
 } XIAOZHI_DATA_T;
 

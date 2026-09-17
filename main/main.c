@@ -7,6 +7,7 @@
 #include "xiaozhi_sr.h"
 #include "xiaozhi_data.h"
 #include "xiaozhi_encoder.h"
+#include "xiaozhi_decoder.h"
 
 static char *TAG = "xiaozhi_main";
 
@@ -20,6 +21,9 @@ void vad_state_callback(void);
 
 // 创建项目中需要使用的环形缓冲区
 static void xiaozhi_ringbuf_init(void);
+
+// 短接使用测试任务
+void test_task(void *pvParameters);
 
 // -------------------------------------------------------------
 
@@ -71,6 +75,12 @@ void app_main(void)
 
     // 6.初始化opus编码器
     xiaozhi_encoder_init();
+
+    // 7.解码器初始化
+    xiaozhi_decoder_init();
+
+    // 测试任务
+    xTaskCreatePinnedToCoreWithCaps(test_task, "test_task", 32 * 1024, NULL, 5, NULL, 1, MALLOC_CAP_SPIRAM);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -114,10 +124,30 @@ void vad_state_callback(void)
 // 任务间通信使用缓冲区
 static void xiaozhi_ringbuf_init(void)
 {
-
-    // 创建唤醒缓冲区:不可分割、可分割、字节流
+    // 1.创建唤醒缓冲区:字节流
     // 环形缓冲区大小:根据用户能接收到的语音延迟时间设计! 100-200ms
     // 1920->60ms: 200ms->4数据帧 缓冲缓冲区:(1920 * 4)/1024 = 7.5K
-    // xiaozhi_data.sr_to_encoder_handle = xRingbufferCreateWithCaps(8 * 1024, RINGBUF_TYPE_NOSPLIT, MALLOC_CAP_SPIRAM);
     xiaozhi_data.sr_to_encoder_handle = xRingbufferCreateWithCaps(8 * 1024, RINGBUF_TYPE_BYTEBUF, MALLOC_CAP_SPIRAM);
+
+    // 2.这个环形缓冲区:编码器组件内部任务与webscoket客户端组件内部任务通信使用
+    // 不可分割缓冲区
+    xiaozhi_data.encoder_to_ws_handle = xRingbufferCreateWithCaps(8 * 1024, RINGBUF_TYPE_NOSPLIT, MALLOC_CAP_SPIRAM);
+
+    // 3.webscoket组件内部任务与解码器组件内部任务通信缓冲区
+    xiaozhi_data.ws_to_decoder_handle = xRingbufferCreateWithCaps(8 * 1024, RINGBUF_TYPE_NOSPLIT, MALLOC_CAP_SPIRAM);
+}
+
+void test_task(void *pvParameters)
+{
+    while (1)
+    {
+        // 将encoder_to_ws缓冲区内部编码音频数据提取出来
+        size_t len = 0;
+        uint8_t *opus_data = xRingbufferReceive(xiaozhi_data.encoder_to_ws_handle, &len, portMAX_DELAY);
+        // 提取数据数据添加到ws_decoder缓冲区
+        xRingbufferSend(xiaozhi_data.ws_to_decoder_handle, opus_data, len, portMAX_DELAY);
+
+        // 用完的数据一定要释放
+        vRingbufferReturnItem(xiaozhi_data.encoder_to_ws_handle, opus_data);
+    }
 }
