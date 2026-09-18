@@ -22,6 +22,7 @@
 #define TAG "DEC_TEST"
 
 #define MAX_ENCODED_FRAMES (20)
+
 typedef union {
     esp_aac_enc_config_t   aac_cfg;
     esp_alac_enc_config_t  alac_cfg;
@@ -261,8 +262,6 @@ int audio_encoder_test(esp_audio_type_t type, audio_codec_test_cfg_t *data_cfg, 
     return ret;
 }
 
-
-//示例讲的是AAC编码器使用,但是通用API【别的编码器也可以使用,导致结构体体积大一些】
 TEST_CASE("AAC Encoder use Common API", CODEC_TEST_MODULE_NAME)
 {
     // Backup original heap size
@@ -278,7 +277,6 @@ TEST_CASE("AAC Encoder use Common API", CODEC_TEST_MODULE_NAME)
     // Open encoder
     esp_audio_enc_handle_t encoder = NULL;
     TEST_ESP_OK(esp_audio_enc_open(&enc_cfg, &encoder));
-    
 
     // Get needed buffer size and prepare memory
     int pcm_size = 0, raw_size = 0;
@@ -318,65 +316,52 @@ TEST_CASE("AAC Encoder use Common API", CODEC_TEST_MODULE_NAME)
     TEST_ASSERT_EQUAL_INT(heap_size, (int)esp_get_free_heap_size());
 }
 
-
-
-//示例讲的是专门AAC编码器使用
 TEST_CASE("AAC Encoder use Encoder API directly", CODEC_TEST_MODULE_NAME)
 {
-
-    //想获取当前MCU栈的内存剩余大小:不需要
+    // Backup original heap size
     int heap_size = esp_get_free_heap_size();
 
-
-    //1.对应的AAC编码器配置参数
     esp_aac_enc_config_t aac_cfg = ESP_AAC_ENC_CONFIG_DEFAULT();
-
-    //2.开启AAC编码器,将来进行编码
     esp_audio_enc_handle_t encoder = NULL;
-    esp_aac_enc_open(&aac_cfg, sizeof(esp_aac_enc_config_t), &encoder);
+    TEST_ESP_OK(esp_aac_enc_open(&aac_cfg, sizeof(esp_aac_enc_config_t), &encoder));
 
-
-     //获取当前编码器:PCM原始音频的字节个数   输出编码后[aac]的字节个数
+    // Get needed buffer size and prepare memory
     int pcm_size = 0, raw_size = 0;
-    //前面PCM音频字节个数:音频采样率 + 位深【数据帧时长】
-    //PCM:1920   RAW_SIZE:100
     esp_aac_enc_get_frame_size(encoder, &pcm_size, &raw_size);
-
-    
-    //存储PCM原始音频数据缓冲区、存储压缩过后AAC音频数据
+    TEST_ASSERT_GREATER_THAN(0, pcm_size);
+    TEST_ASSERT_GREATER_THAN(0, raw_size);
     uint8_t *pcm_data = malloc(MAX_ENCODED_FRAMES * pcm_size);
     uint8_t *raw_data = malloc(raw_size);
+    TEST_ASSERT_NOT_NULL(pcm_data);
+    TEST_ASSERT_NOT_NULL(raw_data);
 
-
-
-
-    //老大哥写测试案例:没有原始PCM音频数据,字节造【1.2s的音频数据】
+    // Generate test pcm data
     audio_info_t aud_info = {
-        .sample_rate = aac_cfg.sample_rate,//16000
-        .bits_per_sample = aac_cfg.bits_per_sample,//16
-        .channel = aac_cfg.channel,//1
+        .sample_rate = aac_cfg.sample_rate,
+        .bits_per_sample = aac_cfg.bits_per_sample,
+        .channel = aac_cfg.channel,
     };
     audio_codec_gen_pcm(&aud_info, pcm_data, MAX_ENCODED_FRAMES * pcm_size);
 
-    //开始编码
+    // Do encoding
     for (int i = 0; i < MAX_ENCODED_FRAMES; i++) {
-
-        //输入数据帧信息:PCM原始音频数据
-        //每一次:都是一个60msPCM数据帧进行编码
         esp_audio_enc_in_frame_t in_frame = {
-            .buffer = pcm_data + pcm_size * i, //pcm_data:存储20个数据帧【1920】,每一次找到要进行编码数据帧首个字节地址
-            .len = pcm_size,//每一次处理PCM音频数据字节个数
+            .buffer = pcm_data + pcm_size * i,
+            .len = pcm_size,
         };
-        
-        //输出的数据帧信息:AAC编码后的数据
         esp_audio_enc_out_frame_t out_frame = {
-            .buffer = raw_data, //指向编码缓冲区首地址
-            .len = raw_size,//编码缓冲区的大小, encoded_bytes成员是实际编码出来音频数据字节个数
+            .buffer = raw_data,
+            .len = raw_size,
         };
-
-      esp_aac_enc_process(encoder, &in_frame, &out_frame); 
+        TEST_ESP_OK(esp_aac_enc_process(encoder, &in_frame, &out_frame));
+        TEST_ASSERT_GREATER_THAN(0, out_frame.encoded_bytes);
     }
 
+    // Clear up resources
+    esp_aac_enc_close(encoder);
+    free(pcm_data);
+    free(raw_data);
+    TEST_ASSERT_EQUAL_INT(heap_size, (int)esp_get_free_heap_size());
 }
 
 TEST_CASE("Encoder query frame information test", CODEC_TEST_MODULE_NAME)

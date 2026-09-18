@@ -22,3 +22,4 @@ dependencies:
   espressif/esp_codec_dev: ^1.6.2
   espressif/esp-sr: ^2.5.3
   espressif/esp_audio_codec: ^2.6.2
+  espressif/esp_websocket_client: ^1.8.0
