@@ -142,8 +142,13 @@ void xiaozhi_lvgl_layout(void)
     // 对话内容
     lv_label_set_text(dialog, "");
     lv_obj_set_style_text_color(dialog, lv_color_hex(0xffffff), 0);
-    // 位置
-    lv_obj_set_align(dialog, LV_ALIGN_BOTTOM_MID);
+    // ===== 新增：固定宽度 + 裁剪 + 居中 =====
+    lv_obj_set_width(dialog, EXAMPLE_LCD_H_RES - 20);          // 左右各留10px
+    lv_label_set_long_mode(dialog, LV_LABEL_LONG_CLIP);        // 关键：不换行、不裁剪到点
+    lv_obj_set_style_text_align(dialog, LV_TEXT_ALIGN_CENTER, 0);
+    // 设置位置
+    lv_obj_align(dialog, LV_ALIGN_BOTTOM_MID, 0, -10);
+    // 设置字体
     lv_obj_set_style_text_font(dialog, &font_puhui_14_1, 0);
 
     // 退出临界区
@@ -250,6 +255,31 @@ static void typewriter_exec_cb(void *var, int32_t value)
     char buf[TYPEWRITER_BUF_SIZE];
     memcpy(buf, dialog_full_text, value);
     buf[value] = '\0'; // 在末尾结束符
+
+    // ===== 新增：若文本超出标签宽度，从头部裁剪，保留末尾 =====
+    int32_t max_w = lv_obj_get_content_width(label);
+    if (max_w > 0 && value > 0) {
+        const lv_font_t *font = lv_obj_get_style_text_font(label, 0);
+        lv_point_t size;
+
+        // 二分查找：找到最小的 start，使 buf[start..end] 的宽度 <= max_w
+        int lo = 0, hi = value;
+        while (lo < hi) {
+            int mid = (lo + hi) / 2;
+            lv_txt_get_size(&size, buf + mid, font, 0, 0,
+                            LV_COORD_MAX, LV_TEXT_FLAG_NONE);
+            if (size.x > max_w) {
+                lo = mid + 1;   // 还是太宽，起点继续右移
+            } else {
+                hi = mid;       // 能放下，尝试更靠左的起点
+            }
+        }
+
+        // 把可见部分平移到 buf 起始处
+        if (lo > 0) {
+            memmove(buf, buf + lo, value - lo + 1);  // 含结尾 '\0'
+        }
+    }
 
     lv_label_set_text(label, buf);
 }

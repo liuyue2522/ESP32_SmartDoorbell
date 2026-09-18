@@ -158,3 +158,17 @@ void xiaozhi_websocket_start(void)
     // 发送唤醒词消息
     xiaozhi_websocket_send_wakeup();
 }
+
+// 当对话结束后,客户端断开连接
+void xiaozhi_websocket_stop(void)
+{
+    // 获取客户端和服务器的连接状态
+    if (esp_websocket_client_is_connected(client))
+    {
+        char *stop = "{\"type\":\"abort\",\"reason\":\"wake_word_detected\"}";
+        xiaozhi_websocket_send_text(stop, strlen(stop));
+
+        esp_websocket_client_stop(client);
+    }
+    
+}

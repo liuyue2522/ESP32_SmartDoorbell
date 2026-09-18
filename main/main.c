@@ -133,11 +133,10 @@ void wakeup_callback(void)
     ESP_LOGE(TAG, "MAIN wakeup_callback");
     xiaozhi_websocket_start();
 }
-// 语音状态检测变化回调
+// 语音状态检测变化回调, 结束对话
 void vad_state_callback(void)
 {
     ESP_LOGE(TAG, "MAIN vad_state_callback");
-
     // 清除唤醒标志
     xiaozhi_data.wakeup_flag = 0;
 }

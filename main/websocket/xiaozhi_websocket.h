@@ -25,4 +25,7 @@ void xiaozhi_websocket_send_audio(char *audio_data, int audio_data_len);
 //4.检测唤醒词进行建立连接与发送唤醒词
 void xiaozhi_websocket_start(void);
 
+// 当对话结束后,客户端断开连接
+void xiaozhi_websocket_stop(void);
+
 #endif /* __XIAOZHI_WEBSOCKET_H__ */
