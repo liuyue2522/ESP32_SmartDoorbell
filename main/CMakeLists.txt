@@ -20,6 +20,7 @@ idf_component_register(
         "./audio/xiaozhi_sr.c"
         "./audio/xiaozhi_encoder.c"
         "./audio/xiaozhi_decoder.c"
+        "./websocket/xiaozhi_websocket.c"
     INCLUDE_DIRS
         "."
         "./button"
@@ -29,6 +30,7 @@ idf_component_register(
         "./com"
         "./http"
         "./audio"
+        "./websocket"
         EMBED_FILES ${IMAGE_FILE}
 )
 

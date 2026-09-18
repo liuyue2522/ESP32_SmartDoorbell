@@ -185,6 +185,7 @@ void xiaozhi_http_client_json_parse(char *json_str)
         ESP_LOGE(TAG, "json_str 字符串为空");
         return;
     }
+    
     // 1.将字符串[JSON形式],转化为CJSON结构体
     cJSON *root = cJSON_Parse(json_str);
     if (root == NULL) {
@@ -194,6 +195,7 @@ void xiaozhi_http_client_json_parse(char *json_str)
         ESP_LOGE(TAG, "JSON 解析失败");
         return;
     }
+
     // 提取websocket、activation
     cJSON *websocket = cJSON_GetObjectItem(root, "websocket");
     cJSON *activation = cJSON_GetObjectItem(root, "activation");

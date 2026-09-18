@@ -4,6 +4,7 @@
 #include "stdbool.h" // 布尔类型
 #include "esp_vad.h" // 语音激活检测
 #include "freertos/ringbuf.h" // 环形缓冲区
+#include "freertos/event_groups.h" // 事件标志组
 
 // 定义结构体:表示表情
 typedef struct
@@ -36,12 +37,20 @@ typedef struct
     // 注册语音状态发生变化的回调
     void (*vad_state_callback)(void);
 
-    // SR组件的任务 与 编码器的任务 通信缓冲区句柄
+    // SR组件任务 与 编码器任务 的通信缓冲区句柄
     RingbufHandle_t sr_to_encoder_handle;
-    //encoder与ws通信使用缓冲区
+    // encoder 与 ws 的通信缓冲区句柄
     RingbufHandle_t encoder_to_ws_handle;
-    //ws与解码器使用缓冲区
+    // ws 与 解码器 的通信缓冲区句柄
     RingbufHandle_t ws_to_decoder_handle;
+
+    //事件标志组句柄
+    EventGroupHandle_t event_group_handle;
+
+    //注册处理服务器返回文本信息回调函数
+    void (*ws_text_callback)(char *text,int text_len);
+    //注册处理服务器返回语音数据回调
+    void (*ws_audio_callback)(char *audio,int audio_len);
 
 
 } XIAOZHI_DATA_T;
