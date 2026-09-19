@@ -247,11 +247,11 @@ void xiaozhi_http_client_json_parse(char *json_str)
     {
         // 说明当前设备已激活
         // 更新标题
-        xiaozhi_lvgl_update_title("AI 小智");
+        xiaozhi_lvgl_update_title("小爱童鞋");
         // 更新表情
         xiaozhi_lvgl_update_emoji("kissy");
         // 更新对话内容
-        xiaozhi_lvgl_update_dialogue_stream("欢迎使用 AI·小智，请问有什么可以帮助您的？");
+        xiaozhi_lvgl_update_dialogue_stream("欢迎使用 AI·小爱，请问有什么可以帮助您的？");
     }
 
     //释放json对象内存：  递归释放整棵树，包括所有子节点、键名、字符串值等。单独释放子节点反而会导致双重释放（double free）和程序崩溃。

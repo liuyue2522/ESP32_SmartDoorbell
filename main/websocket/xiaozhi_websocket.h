@@ -12,6 +12,7 @@
 // 等待服务器回复Hello消息,确认建立连接状态位
 #define CLINET_SERVER_CONNECTED_BIT (1<<1)
 
+// --------------------------------------------------------------------------------------
 
 // 1.初始化websocket客户端
 void xiaozhi_websocket_init(void);
@@ -22,10 +23,21 @@ void xiaozhi_websocket_send_text(const char *text, int text_len);
 // 3.websocket客户端向服务器端发送音频数据方法
 void xiaozhi_websocket_send_audio(char *audio_data, int audio_data_len);
 
-//4.检测唤醒词进行建立连接与发送唤醒词
+// --------------------------------------------------------------------------------------
+
+// 4.websocket客户端向服务器发送唤醒词消息
+void xiaozhi_websocket_send_wakeup(void);
+
+// 5.检测唤醒词进行建立连接与发送唤醒词
 void xiaozhi_websocket_start(void);
 
-// 当对话结束后,客户端断开连接
-void xiaozhi_websocket_stop(void);
+// 6.webscoket客户端给小智服务器发送监听语音状态
+void xiaozhi_websocket_send_start_listen(void);
+
+// 7.webscoket客户端给小智服务器发送停止监听命令
+void xiaozhi_websocket_send_stop_listen(void);
+
+// 8.终止消息，断开连接
+void xiaozhi_websocket_abort(void);
 
 #endif /* __XIAOZHI_WEBSOCKET_H__ */

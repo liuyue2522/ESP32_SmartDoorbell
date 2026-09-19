@@ -9,13 +9,15 @@ extern char mac_str[18];
 extern char uuid[37];
 static const char *TAG = "xiaozhi_websocket";
 
+// --------------------------------------------------------------------------------------
+
 // 封装一个函数,用于客户端发送请求携带请求头
 static void xiaozhi_websocket_send_header(void);
 
 // websocket客户端向服务器发送Hello消息
-void xiaozhi_websocket_send_hello(void);
-// websocket客户端向服务器发送唤醒词消息
-void xiaozhi_websocket_send_wakeup(void);
+static void xiaozhi_websocket_send_hello(void);
+
+// --------------------------------------------------------------------------------------
 
 // websocket事件处理函数
 static void websocket_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
@@ -36,6 +38,11 @@ static void websocket_event_handler(void *handler_args, esp_event_base_t base, i
     // 客户端与服务器端断开连接
     case WEBSOCKET_EVENT_DISCONNECTED:
         ESP_LOGI(TAG, "WEBSOCKET_EVENT_DISCONNECTED");
+        // vTaskDelay(1000);
+        // esp_websocket_client_start(client);
+
+        // 清除唤醒标志
+        xiaozhi_data.wakeup_flag = 0;
         break;
         // 客户端接收到服务端数据:文本 + 语音
     case WEBSOCKET_EVENT_DATA:
@@ -110,6 +117,14 @@ static void xiaozhi_websocket_send_header(void)
     params = NULL;
 }
 
+// 务必等待客户端连接成功以后,客户端再发送Hello消息
+static void xiaozhi_websocket_send_hello(void)
+{
+    char *Hello = "{\"type\":\"hello\",\"version\":1,\"transport\":\"websocket\",\"features\":{\"mcp\":true},\"audio_params\":{\"format\":\"opus\",\"sample_rate\":16000,\"channels\":1,\"frame_duration\":60}}";
+    xiaozhi_websocket_send_text(Hello, strlen(Hello));
+}
+
+
 /*****************************************************************************/
 // 2.webscoket客户端用于向服务器端发送文本消息方法
 void xiaozhi_websocket_send_text(const char *text, int text_len)
@@ -123,27 +138,24 @@ void xiaozhi_websocket_send_audio(char *audio_data, int audio_data_len)
     esp_websocket_client_send_bin(client, audio_data, audio_data_len, portMAX_DELAY);
 }
 
-// 务必等待客户端连接成功以后,客户端再发送Hello消息
-void xiaozhi_websocket_send_hello(void)
-{
-    char *Hello = "{\"type\":\"hello\",\"version\":1,\"transport\":\"websocket\",\"features\":{\"mcp\":true},\"audio_params\":{\"format\":\"opus\",\"sample_rate\":16000,\"channels\":1,\"frame_duration\":60}}";
-    xiaozhi_websocket_send_text(Hello, strlen(Hello));
-}
+/*****************************************************************************/
 
+// 4.websocket客户端向服务器发送唤醒词消息
 // 客户端发送唤醒词:务必在客户端与服务端正式建立连接以后
 void xiaozhi_websocket_send_wakeup(void)
 {
 
-    // char *wakeup = "{\"type\":\"listen\",\"state\":\"detect\",\"text\":\"你好,小智\"}";
-    char *wakeup = "{\"type\":\"listen\",\"state\":\"detect\",\"text\":\"今天天气怎么样\"}";
+    char *wakeup = "{\"type\":\"listen\",\"state\":\"detect\",\"text\":\"你好, 小爱童鞋\"}";
+    // char *wakeup = "{\"type\":\"listen\",\"state\":\"detect\",\"text\":\"今天天气怎么样\"}";
     // 发送唤醒词->你好小智,给服务器
     xiaozhi_websocket_send_text(wakeup, strlen(wakeup));
 }
 
+// 5.检测唤醒词进行建立连接与发送唤醒词
 // 当SR语音识别检测唤醒词:连接服务器->发送Hello->发送唤醒词
 void xiaozhi_websocket_start(void)
 {
-    // 6.发起webscoket请求,准备开连服务器
+    // 发起webscoket请求,准备开连服务器
     // websocket客户端正常来说,不应该初始化就准备连服务器,应该SR检测到唤醒词,客户端在连服务器,准备建立连接!
     // 目前先书写在这里!!!!!
     esp_websocket_client_start(client);
@@ -159,6 +171,28 @@ void xiaozhi_websocket_start(void)
     xiaozhi_websocket_send_wakeup();
 }
 
+// 6.webscoket客户端给小智服务器发送监听语音状态
+/* 
+    监听模式：
+
+    auto: 自动监听，当用户说完话后，自动停止监听，并返回识别结果
+    manual: 手动停止，当用户说完话后，不会自动停止监听，需要用户手动停止监听，并返回识别结果
+    realtime: 持续监听，当用户说完话后，不会自动停止监听，也不会返回识别结果，需要用户手动停止监听，并返回识别结果
+*/
+void xiaozhi_websocket_send_start_listen(void)
+{
+    char *listen = "{\"type\":\"listen\",\"state\":\"start\",\"model\":\"<manual>\"}";
+    xiaozhi_websocket_send_text(listen, strlen(listen));
+}
+
+// 7.webscoket客户端给小智服务器发送停止监听命令
+void xiaozhi_websocket_send_stop_listen(void)
+{
+    char *stop = "{\"type\":\"listen\",\"state\":\"stop\"}";
+    xiaozhi_websocket_send_text(stop, strlen(stop));
+}
+
+// 8.终止消息，断开连接
 // 当对话结束后,客户端断开连接
 void xiaozhi_websocket_stop(void)
 {
@@ -168,6 +202,7 @@ void xiaozhi_websocket_stop(void)
         char *stop = "{\"type\":\"abort\",\"reason\":\"wake_word_detected\"}";
         xiaozhi_websocket_send_text(stop, strlen(stop));
 
+        vTaskDelay(100 / portTICK_PERIOD_MS);
         esp_websocket_client_stop(client);
     }
     

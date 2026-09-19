@@ -11,6 +11,9 @@
 #include "xiaozhi_websocket.h"
 #include "freertos/event_groups.h"
 
+// 引用外部变量：  xiaozhi_lvgl.c 中定义的标题栏对象
+extern lv_obj_t *title;
+
 static char *TAG = "xiaozhi_main";
 
 // 按键回调
@@ -18,7 +21,7 @@ void button_callBack(void *button_handle, void *usr_data);
 
 // SR的声学前端检测到唤醒词回调函数
 void wakeup_callback(void);
-// VAD状态变化回调函数
+// 语音状态检测变化回调, 结束对话
 void vad_state_callback(void);
 
 // 处理服务器返回文本信息
@@ -29,8 +32,8 @@ void ws_audio_callback(char *audio, int len);
 // 创建项目中需要使用的环形缓冲区
 static void xiaozhi_ringbuf_init(void);
 
-// 短接使用测试任务
-void test_task(void *pvParameters);
+// 提取 encoder_to_ws 缓冲区数据， 发送给websocket客户端
+void ws_upload_task(void *pvParameters);
 
 // -------------------------------------------------------------
 
@@ -56,7 +59,7 @@ void app_main(void)
     xiaozhi_lvgl_layout();
 
     // 更新标题
-    xiaozhi_lvgl_update_title("AI 小智");
+    xiaozhi_lvgl_update_title("小爱童鞋");
     // 更新表情
     xiaozhi_lvgl_update_emoji("kissy");
     // 更新对话内容
@@ -75,7 +78,7 @@ void app_main(void)
 
     
 
-    // 3.目前WIFI_STA模式,只能让咱们当前设备链接AP[JCH 12345678],不支持用户配网
+    // 3.BLE配网 + WIFI_STA模式连接上AP热点
     esp_err_t err =  xiaozhi_wifi_sta_init();
 
 
@@ -83,6 +86,9 @@ void app_main(void)
     {
         // 4. HTTP之POST请求想获取虾哥智能体激活码,webscoket通信服务器地址.....
         xiaozhi_http_client_init();
+
+        // 标记小智服务器状态
+        xiaozhi_data.server_state = SERVER_STATE_IDLE;
 
         // 4.1 webscoket客户端初始化
         xiaozhi_websocket_init();
@@ -96,11 +102,10 @@ void app_main(void)
         // 7.解码器初始化
         xiaozhi_decoder_init();
 
-        // 测试任务
-        xTaskCreatePinnedToCoreWithCaps(test_task, "test_task", 32 * 1024, NULL, 5, NULL, 1, MALLOC_CAP_SPIRAM);
+        // 提取 encoder_to_ws 缓冲区数据， 发送给websocket客户端
+        xTaskCreatePinnedToCoreWithCaps(ws_upload_task, "ws_upload_task", 32 * 1024, NULL, 5, NULL, 1, MALLOC_CAP_SPIRAM);
     }
 
-    
 }
 
 //-----------------------------------------------------------------------------------------
@@ -131,14 +136,59 @@ void button_callBack(void *button_handle, void *usr_data)
 void wakeup_callback(void)
 {
     ESP_LOGE(TAG, "MAIN wakeup_callback");
-    xiaozhi_websocket_start();
+    // 检测到唤醒时,与小智服务器建立连接
+    if (xiaozhi_data.server_state == SERVER_STATE_IDLE)
+    {
+        xiaozhi_websocket_start();
+    }
+    else if (xiaozhi_data.server_state == SERVER_STATE_SPEAKING)
+    {
+        // 小智正在说话的时候,让它终止
+        xiaozhi_websocket_abort();
+        // 再次换新新的聊天
+        xiaozhi_websocket_send_wakeup();
+    }
 }
 // 语音状态检测变化回调, 结束对话
 void vad_state_callback(void)
 {
     ESP_LOGE(TAG, "MAIN vad_state_callback");
-    // 清除唤醒标志
-    xiaozhi_data.wakeup_flag = 0;
+
+    // 1.SR语音识别,人【不是小智】如果说话,需要让小智服务器处于监听状态
+    // SR检测到有声音:有可能喇叭播放小智声音、人的声音!
+    if (xiaozhi_data.current_vad_state == VAD_SPEECH)
+    {
+        // 能保证喇叭,小智绝对没有在说话
+        if (xiaozhi_data.server_state == SERVER_STATE_IDLE)
+        {
+
+            // 在发送人声音二进制数据之前,下发监听命令,小智服务器处于监听状态
+            xiaozhi_websocket_send_start_listen();
+
+            // 小智服务器接收到这个命令,它的状态发生变化
+            xiaozhi_data.server_state = SERVER_STATE_LISTENING;
+
+            xiaozhi_lvgl_update_title("聆听中.....");
+            // 标题开始闪烁
+            xiaozhi_lvgl_start_blink(title);
+        }
+    }
+
+    // 2.SR语音识别检测到静音,可以让小智服务器停止监听!!!!
+    if (xiaozhi_data.current_vad_state == VAD_SILENCE)
+    {
+        // 小智服务器没有说话,一定检测不到声音 【没声、小智处于空闲、监听】
+        if (xiaozhi_data.server_state != SERVER_STATE_SPEAKING)
+        {
+            // 真的下达停止监听命令
+            xiaozhi_websocket_send_stop_listen();
+            // 更新小智服务器状态空闲
+            xiaozhi_data.server_state = SERVER_STATE_IDLE;
+            xiaozhi_lvgl_update_title("小爱童鞋");
+            // 标题栏停止闪烁
+            xiaozhi_lvgl_stop_blink(title);
+        }
+    }
 }
 
 // 任务间通信使用缓冲区
@@ -157,15 +207,20 @@ static void xiaozhi_ringbuf_init(void)
     xiaozhi_data.ws_to_decoder_handle = xRingbufferCreateWithCaps(8 * 1024, RINGBUF_TYPE_NOSPLIT, MALLOC_CAP_SPIRAM);
 }
 
-void test_task(void *pvParameters)
+void ws_upload_task(void *pvParameters)
 {
     while (1)
     {
         // 将encoder_to_ws缓冲区内部编码音频数据提取出来
         size_t len = 0;
         uint8_t *opus_data = xRingbufferReceive(xiaozhi_data.encoder_to_ws_handle, &len, portMAX_DELAY);
-        // 提取数据数据 发送给websocket客户端
-        // ----------------------------------------------
+
+        // 提取 encoder_to_ws 缓冲区数据， 发送给websocket客户端
+        // 小智服务器务必处于监听状态,把人的声音音频数据在上传给服务器
+        if (xiaozhi_data.server_state == SERVER_STATE_LISTENING)
+        {
+            xiaozhi_websocket_send_audio(opus_data, len);
+        }
 
         // 用完的数据一定要释放
         vRingbufferReturnItem(xiaozhi_data.encoder_to_ws_handle, opus_data);
@@ -226,6 +281,26 @@ void ws_text_callback(char *text, int len)
             char *text = cJSON_GetObjectItem(root, "text")->valuestring;
             // 更新对话内容
             xiaozhi_lvgl_update_dialogue_stream(text);
+        }
+        
+        // 查看小智[服务器]状态,修改
+        if (strcmp(state, "start") == 0)
+        {
+            // 说明小智服务器开始返回文本消息、语音消息.开始说话了
+            xiaozhi_data.server_state = SERVER_STATE_SPEAKING;
+            // 更新标题,表示小智兄弟正在说话
+            xiaozhi_lvgl_update_title("正在说话中......");
+            // 标题开始闪烁
+            xiaozhi_lvgl_start_blink(title);
+        }
+
+        if (strcmp(state, "stop") == 0)
+        {
+            // 小智服务器给咱们返回数据结束,它不在说话了
+            xiaozhi_data.server_state = SERVER_STATE_IDLE;
+            xiaozhi_lvgl_update_title("小爱童鞋");
+            // 标题栏停止闪烁
+            xiaozhi_lvgl_stop_blink(title);
         }
     }
 

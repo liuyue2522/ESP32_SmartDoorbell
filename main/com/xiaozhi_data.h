@@ -14,8 +14,13 @@ typedef struct
 
 } EMOJI_T;
 
-//对外暴露21表情包
-extern EMOJI_T emoji_array[21];
+
+typedef enum
+{
+    SERVER_STATE_IDLE, // 小智空闲状态
+    SERVER_STATE_SPEAKING, // 小智正在说话
+    SERVER_STATE_LISTENING, // 小智正在监听
+} SERVER_STATE_T;
 
 
 // 存储项目多个组件共用的数据
@@ -52,9 +57,18 @@ typedef struct
     //注册处理服务器返回语音数据回调
     void (*ws_audio_callback)(char *audio,int audio_len);
 
+    // 服务器状态
+    SERVER_STATE_T server_state;
 
 } XIAOZHI_DATA_T;
 
+
+//对外暴露21表情包
+extern EMOJI_T emoji_array[21];
+
 extern XIAOZHI_DATA_T xiaozhi_data;
+
+//--------------------------------------------------------
+
 
 #endif /* __XIAOZHI_DATA_H__ */
