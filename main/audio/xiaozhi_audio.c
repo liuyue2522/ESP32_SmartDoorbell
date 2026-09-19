@@ -106,7 +106,7 @@ void xiaozhi_audio_init(void)
     codec_dev = esp_codec_dev_new(&dev_cfg);
 
     // 播放音频相关参数配置
-    esp_codec_dev_set_out_vol(codec_dev, 30.0); // 播放音量大小: 音量百分比（0~100），不是 dB
+    esp_codec_dev_set_out_vol(codec_dev, 50.0); // 播放音量大小: 音量百分比（0~100），不是 dB
     esp_codec_dev_sample_info_t fs = {
         // 播放音频数据参数要求
         .sample_rate = 16000,  // 采样率16KHZ

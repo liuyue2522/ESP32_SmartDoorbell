@@ -57,10 +57,10 @@ void xiaozhi_sr_init(void)
 
     // 1.1任务,给AFE喂数据PCM音频数据
     /* 创建任务： 指定任务所用内存空间是内部内存还是外部内存，还可以指定内核。 */
-    xTaskCreatePinnedToCoreWithCaps(feed_task, "feed", 32 * 1024, NULL, 5, NULL, 1, MALLOC_CAP_SPIRAM);
+    xTaskCreatePinnedToCoreWithCaps(feed_task, "feed", 32 * 1024, NULL, 5, NULL, 0, MALLOC_CAP_SPIRAM);
 
     // 2.提取识别结果任务
-    xTaskCreatePinnedToCoreWithCaps(detect_task, "detect", 32 * 1024, NULL, 5, NULL, 1, MALLOC_CAP_SPIRAM);
+    xTaskCreatePinnedToCoreWithCaps(detect_task, "detect", 32 * 1024, NULL, 5, NULL, 0, MALLOC_CAP_SPIRAM);
 }
 
 // 给AFE喂数据PCM音频数据

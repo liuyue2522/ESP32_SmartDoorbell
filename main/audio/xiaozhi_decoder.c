@@ -24,7 +24,7 @@ void xiaozhi_decoder_init(void)
     esp_opus_dec_open(&opuc_cfg, sizeof(opuc_cfg), &decoder);
 
     // 3.开启解码任务
-    xTaskCreatePinnedToCoreWithCaps(decoder_task, "decoder", 32 * 1024, NULL, 5, NULL, 1, MALLOC_CAP_SPIRAM);
+    xTaskCreatePinnedToCoreWithCaps(decoder_task, "decoder", 32 * 1024, NULL, 3, NULL, 1, MALLOC_CAP_SPIRAM);
 }
 
 void decoder_task(void *params)

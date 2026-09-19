@@ -38,6 +38,6 @@ void xiaozhi_websocket_send_start_listen(void);
 void xiaozhi_websocket_send_stop_listen(void);
 
 // 8.终止消息，断开连接
-void xiaozhi_websocket_abort(void);
+void xiaozhi_websocket_stop(void);
 
 #endif /* __XIAOZHI_WEBSOCKET_H__ */

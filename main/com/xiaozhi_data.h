@@ -18,6 +18,7 @@ typedef struct
 typedef enum
 {
     SERVER_STATE_IDLE, // 小智空闲状态
+    SERVER_STATE_CONNECTING,   // 新增：正在连接中
     SERVER_STATE_SPEAKING, // 小智正在说话
     SERVER_STATE_LISTENING, // 小智正在监听
 } SERVER_STATE_T;

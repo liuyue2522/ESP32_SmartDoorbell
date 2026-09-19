@@ -132,6 +132,14 @@ void button_callBack(void *button_handle, void *usr_data)
     }
 }
 
+//-----------------------------------------------------------------
+// 新增：WebSocket 连接任务
+static void websocket_connect_task(void *params)
+{
+    xiaozhi_websocket_start();  // 阻塞式连接，放在独立任务里
+    vTaskDelete(NULL);
+}
+
 // 检测到唤醒词执行一次
 void wakeup_callback(void)
 {
@@ -139,20 +147,28 @@ void wakeup_callback(void)
     // 检测到唤醒时,与小智服务器建立连接
     if (xiaozhi_data.server_state == SERVER_STATE_IDLE)
     {
-        xiaozhi_websocket_start();
+        // 先设置为"连接中"，阻止 vad_state_callback 提前改状态
+        xiaozhi_data.server_state = SERVER_STATE_CONNECTING;
+        // 不要直接调用 xiaozhi_websocket_start()，改为创建任务
+        xTaskCreatePinnedToCoreWithCaps(websocket_connect_task, "ws_connect", 8 * 1024, NULL, 5, NULL, 0, MALLOC_CAP_SPIRAM);
     }
     else if (xiaozhi_data.server_state == SERVER_STATE_SPEAKING)
     {
         // 小智正在说话的时候,让它终止
-        xiaozhi_websocket_abort();
+        xiaozhi_websocket_stop();
         // 再次换新新的聊天
         xiaozhi_websocket_send_wakeup();
     }
 }
+//--------------------------------------------------------------
+
 // 语音状态检测变化回调, 结束对话
 void vad_state_callback(void)
 {
-    ESP_LOGE(TAG, "MAIN vad_state_callback");
+    if (xiaozhi_data.server_state == SERVER_STATE_CONNECTING)
+    {
+        return;  // 连接中，不处理
+    }
 
     // 1.SR语音识别,人【不是小智】如果说话,需要让小智服务器处于监听状态
     // SR检测到有声音:有可能喇叭播放小智声音、人的声音!
@@ -178,7 +194,7 @@ void vad_state_callback(void)
     if (xiaozhi_data.current_vad_state == VAD_SILENCE)
     {
         // 小智服务器没有说话,一定检测不到声音 【没声、小智处于空闲、监听】
-        if (xiaozhi_data.server_state != SERVER_STATE_SPEAKING)
+        if (xiaozhi_data.server_state == SERVER_STATE_IDLE)
         {
             // 真的下达停止监听命令
             xiaozhi_websocket_send_stop_listen();
@@ -213,7 +229,7 @@ void ws_upload_task(void *pvParameters)
     {
         // 将encoder_to_ws缓冲区内部编码音频数据提取出来
         size_t len = 0;
-        uint8_t *opus_data = xRingbufferReceive(xiaozhi_data.encoder_to_ws_handle, &len, portMAX_DELAY);
+        char *opus_data = xRingbufferReceive(xiaozhi_data.encoder_to_ws_handle, &len, portMAX_DELAY);
 
         // 提取 encoder_to_ws 缓冲区数据， 发送给websocket客户端
         // 小智服务器务必处于监听状态,把人的声音音频数据在上传给服务器
@@ -260,6 +276,12 @@ void ws_text_callback(char *text, int len)
     {
         // 客户端收到服务端返回Hello消息,表明与客户端正式建立连接
         xEventGroupSetBits(xiaozhi_data.event_group_handle, CLINET_SERVER_CONNECTED_BIT);
+        
+        // 连接建立完成，恢复空闲状态，允许 vad_state_callback 处理
+        if (xiaozhi_data.server_state == SERVER_STATE_CONNECTING)
+        {
+            xiaozhi_data.server_state = SERVER_STATE_IDLE;
+        }
     }
 
     // 更新LCD屏幕表情

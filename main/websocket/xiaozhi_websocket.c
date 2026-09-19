@@ -70,10 +70,14 @@ static void websocket_event_handler(void *handler_args, esp_event_base_t base, i
         // 通信出现错误
     case WEBSOCKET_EVENT_ERROR:
         ESP_LOGI(TAG, "WEBSOCKET_EVENT_ERROR");
+        // 清除唤醒标志
+        xiaozhi_data.wakeup_flag = 0;
         break;
         // 通信结束
     case WEBSOCKET_EVENT_FINISH:
         ESP_LOGI(TAG, "WEBSOCKET_EVENT_FINISH");
+        // 清除唤醒标志
+        xiaozhi_data.wakeup_flag = 0;
         break;
     }
 }

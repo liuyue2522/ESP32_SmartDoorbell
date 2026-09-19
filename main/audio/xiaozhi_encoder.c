@@ -47,7 +47,7 @@ void xiaozhi_encoder_init(void)
     // 5.创建编码任务,将PCM原始音频数据编码为opus音频数据
     // 1.ESP32S3双核:WIFI、BLE、LVGL、HTTP等默认任务,默认都是放在core0
     // 2.处理音频数据【60ms->1920字节】
-    xTaskCreatePinnedToCoreWithCaps(encoder_task, "encoder", 32 * 1024, NULL, 5, NULL, 1, MALLOC_CAP_SPIRAM);
+    xTaskCreatePinnedToCoreWithCaps(encoder_task, "encoder", 32 * 1024, NULL, 3, NULL, 1, MALLOC_CAP_SPIRAM);
 }
 
 
@@ -100,5 +100,8 @@ void encoder_task(void *params)
 
         // 打印当前任务堆栈使用情况
         // ESP_LOGI(TAG, "encoder stack high water mark: %u", uxTaskGetStackHighWaterMark(NULL));
+
+        // 编码完成后，主动让出 CPU，避免独占
+        vTaskDelay(1);  // 至少延时 1 个 tick，避免 CPU 占用率过高
     }
 }
